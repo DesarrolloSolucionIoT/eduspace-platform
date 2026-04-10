@@ -1,0 +1,22 @@
+# Build outputs
+bin/
+obj/
+out/
+publish/
+
+# NuGet packages
+/packages/
+
+# Rider / ReSharper
+riderModule.iml
+/_ReSharper.Caches/
+.idea
+*.DotSettings.user
+
+# Visual Studio
+.vs/
+*.user
+
+# Environment / secrets
+.env
+.env.*
