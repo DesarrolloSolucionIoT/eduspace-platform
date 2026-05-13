@@ -1,4 +1,4 @@
-namespace FULLSTACKFURY.EduSpace.API.IAM.Infrastructure.Toknes.JWT.Configuration;
+namespace FULLSTACKFURY.EduSpace.API.IAM.Infrastructure.Tokens.JWT.Configuration;
 
 public class TokenSettings
 {

@@ -55,24 +55,6 @@ namespace FULLSTACKFURY.EduSpace.API.Migrations
                     b.ToTable("reports");
                 });
 
-            modelBuilder.Entity("FULLSTACKFURY.EduSpace.API.EventsScheduling.Domain.Model.Aggregates.Reservation", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasColumnName("id");
-
-                    b.Property<string>("Title")
-                        .IsRequired()
-                        .HasColumnType("longtext")
-                        .HasColumnName("title");
-
-                    b.HasKey("Id")
-                        .HasName("p_k_reservations");
-
-                    b.ToTable("reservations");
-                });
-
             modelBuilder.Entity("FULLSTACKFURY.EduSpace.API.IAM.Domain.Model.Aggregates.Account", b =>
                 {
                     b.Property<int>("Id")
@@ -338,82 +320,6 @@ namespace FULLSTACKFURY.EduSpace.API.Migrations
                         .HasName("p_k_shared_areas");
 
                     b.ToTable("shared_areas");
-                });
-
-            modelBuilder.Entity("FULLSTACKFURY.EduSpace.API.EventsScheduling.Domain.Model.Aggregates.Reservation", b =>
-                {
-                    b.OwnsOne("FULLSTACKFURY.EduSpace.API.EventsScheduling.Domain.Model.ValueObjects.AreaId", "AreaId", b1 =>
-                        {
-                            b1.Property<int>("Id")
-                                .HasColumnType("int")
-                                .HasColumnName("id");
-
-                            b1.Property<int>("Identifier")
-                                .HasColumnType("int")
-                                .HasColumnName("area_id");
-
-                            b1.HasKey("Id")
-                                .HasName("p_k_reservations");
-
-                            b1.ToTable("reservations");
-
-                            b1.WithOwner()
-                                .HasForeignKey("Id")
-                                .HasConstraintName("f_k_reservations_reservations_id");
-                        });
-
-                    b.OwnsOne("FULLSTACKFURY.EduSpace.API.EventsScheduling.Domain.Model.ValueObjects.ReservationDate", "ReservationDate", b1 =>
-                        {
-                            b1.Property<int>("Id")
-                                .HasColumnType("int")
-                                .HasColumnName("id");
-
-                            b1.Property<DateTime>("End")
-                                .HasColumnType("datetime(6)")
-                                .HasColumnName("end");
-
-                            b1.Property<DateTime>("Start")
-                                .HasColumnType("datetime(6)")
-                                .HasColumnName("start");
-
-                            b1.HasKey("Id")
-                                .HasName("p_k_reservations");
-
-                            b1.ToTable("reservations");
-
-                            b1.WithOwner()
-                                .HasForeignKey("Id")
-                                .HasConstraintName("f_k_reservations_reservations_id");
-                        });
-
-                    b.OwnsOne("FULLSTACKFURY.EduSpace.API.EventsScheduling.Domain.Model.ValueObjects.TeacherId", "TeacherId", b1 =>
-                        {
-                            b1.Property<int>("Id")
-                                .HasColumnType("int")
-                                .HasColumnName("id");
-
-                            b1.Property<int>("TeacherIdentifier")
-                                .HasColumnType("int")
-                                .HasColumnName("teacher_id");
-
-                            b1.HasKey("Id")
-                                .HasName("p_k_reservations");
-
-                            b1.ToTable("reservations");
-
-                            b1.WithOwner()
-                                .HasForeignKey("Id")
-                                .HasConstraintName("f_k_reservations_reservations_id");
-                        });
-
-                    b.Navigation("AreaId")
-                        .IsRequired();
-
-                    b.Navigation("ReservationDate")
-                        .IsRequired();
-
-                    b.Navigation("TeacherId")
-                        .IsRequired();
                 });
 
             modelBuilder.Entity("FULLSTACKFURY.EduSpace.API.IAM.Domain.Model.Aggregates.VerificationCode", b =>

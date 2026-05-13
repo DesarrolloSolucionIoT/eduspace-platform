@@ -2,12 +2,12 @@ using System.Security.Claims;
 using System.Text;
 using FULLSTACKFURY.EduSpace.API.IAM.Application.Internal.OutboundServices;
 using FULLSTACKFURY.EduSpace.API.IAM.Domain.Model.Aggregates;
-using FULLSTACKFURY.EduSpace.API.IAM.Infrastructure.Toknes.JWT.Configuration;
+using FULLSTACKFURY.EduSpace.API.IAM.Infrastructure.Tokens.JWT.Configuration;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 
-namespace FULLSTACKFURY.EduSpace.API.IAM.Infrastructure.Toknes.JWT.Services;
+namespace FULLSTACKFURY.EduSpace.API.IAM.Infrastructure.Tokens.JWT.Services;
 
 public class TokenService(IOptions<TokenSettings> tokenSettings) : ITokenService
 {

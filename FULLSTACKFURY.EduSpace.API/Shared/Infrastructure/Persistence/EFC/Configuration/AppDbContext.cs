@@ -1,7 +1,6 @@
 using EntityFrameworkCore.CreatedUpdatedDate.Extensions;
 using FULLSTACKFURY.EduSpace.API.BreakdownManagement.Domain.Model.Aggregates;
 using FULLSTACKFURY.EduSpace.API.BreakdownManagement.Domain.Model.ValueObjects;
-using FULLSTACKFURY.EduSpace.API.EventsScheduling.Domain.Model.Aggregates;
 using FULLSTACKFURY.EduSpace.API.IAM.Domain.Model.Aggregates;
 using FULLSTACKFURY.EduSpace.API.Profiles.Domain.Model.Aggregates;
 using FULLSTACKFURY.EduSpace.API.ReservationScheduling.Domain.Model.Aggregates;
@@ -84,31 +83,6 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
         builder.Entity<Account>().Property(a => a.Username).IsRequired();
         builder.Entity<Account>().Property(a => a.PasswordHash).IsRequired();
         builder.Entity<Account>().Property(a => a.Role).IsRequired();
-
-        //Reservations Context
-
-        builder.Entity<Reservation>().HasKey(r => r.Id);
-        builder.Entity<Reservation>().Property(r => r.Id).IsRequired().ValueGeneratedOnAdd();
-        builder.Entity<Reservation>().Property(r => r.Title).IsRequired();
-        builder.Entity<Reservation>().OwnsOne(r => r.ReservationDate,
-            rd =>
-            {
-                rd.WithOwner().HasForeignKey("Id");
-                rd.Property(r => r.Start).HasColumnName("Start");
-                rd.Property(r => r.End).HasColumnName("End");
-            });
-        builder.Entity<Reservation>().OwnsOne(r => r.AreaId,
-            ai =>
-            {
-                ai.WithOwner().HasForeignKey("Id");
-                ai.Property(r => r.Identifier).HasColumnName("AreaId");
-            });
-        builder.Entity<Reservation>().OwnsOne(r => r.TeacherId,
-            ti =>
-            {
-                ti.WithOwner().HasForeignKey("Id");
-                ti.Property(r => r.TeacherIdentifier).HasColumnName("TeacherId");
-            });
 
         builder.Entity<Classroom>().HasKey(c => c.Id);
         builder.Entity<Classroom>().Property(c => c.Name).IsRequired();

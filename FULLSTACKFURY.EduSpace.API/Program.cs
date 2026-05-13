@@ -4,12 +4,6 @@ using FULLSTACKFURY.EduSpace.API.BreakdownManagement.Application.Internal.QueryS
 using FULLSTACKFURY.EduSpace.API.BreakdownManagement.Domain.Repositories;
 using FULLSTACKFURY.EduSpace.API.BreakdownManagement.Domain.Services;
 using FULLSTACKFURY.EduSpace.API.BreakdownManagement.Infrastructure.Persistence.EFC.Repositories;
-using FULLSTACKFURY.EduSpace.API.EventsScheduling.Application.Internal.CommandServices;
-using FULLSTACKFURY.EduSpace.API.EventsScheduling.Application.Internal.OutboundServices;
-using FULLSTACKFURY.EduSpace.API.EventsScheduling.Application.Internal.QueryServices;
-using FULLSTACKFURY.EduSpace.API.EventsScheduling.Domain.Repositories;
-using FULLSTACKFURY.EduSpace.API.EventsScheduling.Domain.Services;
-using FULLSTACKFURY.EduSpace.API.EventsScheduling.Infrastructure.Persistence.EFC.Repositories;
 using FULLSTACKFURY.EduSpace.API.IAM.Application.Internal.CommandServices;
 using FULLSTACKFURY.EduSpace.API.IAM.Application.Internal.OutboundServices;
 using FULLSTACKFURY.EduSpace.API.IAM.Application.Internal.QueryServices;
@@ -19,8 +13,8 @@ using FULLSTACKFURY.EduSpace.API.IAM.Infrastructure.Hashing.BCrypt.Services;
 using FULLSTACKFURY.EduSpace.API.IAM.Infrastructure.Persistence.EFC.Repositories;
 using FULLSTACKFURY.EduSpace.API.IAM.Infrastructure.Pipeline.Middleware.Components;
 using FULLSTACKFURY.EduSpace.API.IAM.Infrastructure.Services;
-using FULLSTACKFURY.EduSpace.API.IAM.Infrastructure.Toknes.JWT.Configuration;
-using FULLSTACKFURY.EduSpace.API.IAM.Infrastructure.Toknes.JWT.Services;
+using FULLSTACKFURY.EduSpace.API.IAM.Infrastructure.Tokens.JWT.Configuration;
+using FULLSTACKFURY.EduSpace.API.IAM.Infrastructure.Tokens.JWT.Services;
 using FULLSTACKFURY.EduSpace.API.IAM.Interfaces.ACL;
 using FULLSTACKFURY.EduSpace.API.IAM.Interfaces.ACL.Services;
 using FULLSTACKFURY.EduSpace.API.Profiles.Application.Internal.CommandServices;
@@ -50,8 +44,6 @@ using FULLSTACKFURY.EduSpace.API.SpacesAndResourceManagement.Interfaces.ACL;
 using FULLSTACKFURY.EduSpace.API.SpacesAndResourceManagement.Interfaces.ACL.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
-using IExternalProfileService =
-    FULLSTACKFURY.EduSpace.API.EventsScheduling.Application.Internal.OutboundServices.IExternalProfileService;
 
 Env.Load("../.env");
 
@@ -135,9 +127,6 @@ builder.Services.AddDbContext<AppDbContext>(options =>
             .LogTo(Console.WriteLine, LogLevel.Error);
 });
 
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(options => options.EnableAnnotations());
-
 //Shared BC
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
@@ -154,11 +143,7 @@ builder.Services.AddScoped<IAccountCommandService, AccountCommandService>();
 builder.Services.AddScoped<IAccountRepository, AccountRepository>();
 
 builder.Services.AddScoped<IAccountQueryService, AccountQueryService>();
-builder.Services.AddScoped<IReservationCommandService, ReservationCommandService>();
-builder.Services.AddScoped<IReservationRepository, ReservationRepository>();
-builder.Services.AddScoped<IExternalProfileService, ExternalProfileServices>();
 builder.Services.AddScoped<IProfilesContextFacade, ProfilesContextFacade>();
-builder.Services.AddScoped<IReservationQueryService, ReservationQueryService>();
 
 builder.Services.AddScoped<IReportRepository, ReportRepository>();
 builder.Services.AddScoped<IReportCommandService, ReportCommandService>();
@@ -196,10 +181,6 @@ builder.Services.AddScoped<ISharedAreaQueryService, SharedAreaQueryService>();
 //Token Settings Configuration
 builder.Services.Configure<TokenSettings>(builder.Configuration.GetSection("TokenSettings"));
 
-builder.Services.AddScoped<IAccountRepository, AccountRepository>();
-builder.Services.AddScoped<IAccountCommandService, AccountCommandService>();
-builder.Services.AddScoped<IAccountQueryService, AccountQueryService>();
-
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IHashingService, HashingService>();
 
@@ -210,7 +191,6 @@ else
     builder.Services.AddScoped<IEmailService, EmailService>();
 
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
-builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
 
 var app = builder.Build();
@@ -220,7 +200,7 @@ using (var scope = app.Services.CreateScope())
     var services = scope.ServiceProvider;
     var context = services.GetRequiredService<AppDbContext>();
 
-    context.Database.EnsureCreated();
+    context.Database.Migrate();
 }
 
 // Configure the HTTP request pipeline.

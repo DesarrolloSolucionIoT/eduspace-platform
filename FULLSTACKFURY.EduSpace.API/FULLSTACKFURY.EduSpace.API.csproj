@@ -29,7 +29,6 @@
         <PackageReference Include="Microsoft.IdentityModel.Tokens" Version="8.2.0"/>
 
         <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="8.0.8"/>
-        <PackageReference Include="Microsoft.EntityFrameworkCore.Relational.Design" Version="1.1.6"/>
         <!-- MySQL Database Persistence related packages -->
         <PackageReference Include="MySql.EntityFrameworkCore" Version="8.0.5"/>
         <!-- Audit Trails related packages -->

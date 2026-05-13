@@ -81,20 +81,20 @@ namespace FULLSTACKFURY.EduSpace.API.Migrations
                 .Annotation("MySQL:Charset", "utf8mb4");
 
             migrationBuilder.CreateTable(
-                name: "reservations",
+                name: "reports",
                 columns: table => new
                 {
                     id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("MySQL:ValueGenerationStrategy", MySQLValueGenerationStrategy.IdentityColumn),
-                    title = table.Column<string>(type: "longtext", nullable: false),
-                    start = table.Column<DateTime>(type: "datetime(6)", nullable: false),
-                    end = table.Column<DateTime>(type: "datetime(6)", nullable: false),
-                    area_id = table.Column<int>(type: "int", nullable: false),
-                    teacher_id = table.Column<int>(type: "int", nullable: false)
+                    kind_of_report = table.Column<string>(type: "longtext", nullable: false),
+                    description = table.Column<string>(type: "longtext", nullable: false),
+                    resource_id = table.Column<int>(type: "int", nullable: false),
+                    created_at = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                    status = table.Column<string>(type: "longtext", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("p_k_reservations", x => x.id);
+                    table.PrimaryKey("p_k_reports", x => x.id);
                 })
                 .Annotation("MySQL:Charset", "utf8mb4");
 
@@ -172,6 +172,29 @@ namespace FULLSTACKFURY.EduSpace.API.Migrations
                 .Annotation("MySQL:Charset", "utf8mb4");
 
             migrationBuilder.CreateTable(
+                name: "verification_codes",
+                columns: table => new
+                {
+                    id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("MySQL:ValueGenerationStrategy", MySQLValueGenerationStrategy.IdentityColumn),
+                    account_id = table.Column<int>(type: "int", nullable: false),
+                    code = table.Column<string>(type: "longtext", nullable: false),
+                    expiration_date = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                    is_used = table.Column<bool>(type: "tinyint(1)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("p_k_verification_codes", x => x.id);
+                    table.ForeignKey(
+                        name: "f_k_verification_codes_accounts_account_id",
+                        column: x => x.account_id,
+                        principalTable: "accounts",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                })
+                .Annotation("MySQL:Charset", "utf8mb4");
+
+            migrationBuilder.CreateTable(
                 name: "resources",
                 columns: table => new
                 {
@@ -214,7 +237,7 @@ namespace FULLSTACKFURY.EduSpace.API.Migrations
                         column: x => x.teacher_id,
                         principalTable: "teacher_profiles",
                         principalColumn: "id",
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.Cascade);
                 })
                 .Annotation("MySQL:Charset", "utf8mb4");
 
@@ -237,14 +260,16 @@ namespace FULLSTACKFURY.EduSpace.API.Migrations
                 name: "i_x_teacher_profiles_account_id_id",
                 table: "teacher_profiles",
                 column: "account_id_id");
+
+            migrationBuilder.CreateIndex(
+                name: "i_x_verification_codes_account_id",
+                table: "verification_codes",
+                column: "account_id");
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropTable(
-                name: "accounts");
-
             migrationBuilder.DropTable(
                 name: "admin_profiles");
 
@@ -252,13 +277,16 @@ namespace FULLSTACKFURY.EduSpace.API.Migrations
                 name: "meeting_sessions");
 
             migrationBuilder.DropTable(
-                name: "reservations");
+                name: "reports");
 
             migrationBuilder.DropTable(
                 name: "resources");
 
             migrationBuilder.DropTable(
                 name: "shared_areas");
+
+            migrationBuilder.DropTable(
+                name: "verification_codes");
 
             migrationBuilder.DropTable(
                 name: "meetings");
@@ -268,6 +296,9 @@ namespace FULLSTACKFURY.EduSpace.API.Migrations
 
             migrationBuilder.DropTable(
                 name: "classrooms");
+
+            migrationBuilder.DropTable(
+                name: "accounts");
 
             migrationBuilder.DropTable(
                 name: "account_ids");
