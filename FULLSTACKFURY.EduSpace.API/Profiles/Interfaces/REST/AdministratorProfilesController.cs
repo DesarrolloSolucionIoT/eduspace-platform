@@ -5,12 +5,14 @@ using FULLSTACKFURY.EduSpace.API.Profiles.Domain.Model.Queries;
 using FULLSTACKFURY.EduSpace.API.Profiles.Domain.Services;
 using FULLSTACKFURY.EduSpace.API.Profiles.Interfaces.REST.Resources;
 using FULLSTACKFURY.EduSpace.API.Profiles.Interfaces.REST.Transform;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace FULLSTACKFURY.EduSpace.API.Profiles.Interfaces.REST;
 
 [ApiController]
+[Authorize]
 [Route("api/v1/administrator-profiles")]
 [Produces(MediaTypeNames.Application.Json)]
 public class AdministratorProfilesController(

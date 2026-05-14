@@ -126,16 +126,16 @@ public class Meeting
             Description = description;
     }
 
-    public void UpdateDate(DateOnly? date)
+    /// <summary>
+    /// Atomically updates date and time, enforcing EnsureValidSchedule on every write.
+    /// Replaces the old UpdateDate + UpdateTime methods that bypassed invariants.
+    /// </summary>
+    public void UpdateSchedule(DateOnly date, TimeOnly startTime, TimeOnly endTime)
     {
-        if (date.HasValue)
-            Date = date.Value;
-    }
-
-    public void UpdateTime(TimeOnly? start, TimeOnly? end)
-    {
-        if (start.HasValue) StartTime = start.Value;
-        if (end.HasValue) EndTime = end.Value;
+        EnsureValidSchedule(date, startTime, endTime);
+        Date = date;
+        StartTime = startTime;
+        EndTime = endTime;
     }
 
     public void UpdateAdministrator(int? adminId, Func<int, bool> validateAdmin)

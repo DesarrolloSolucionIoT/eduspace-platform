@@ -63,8 +63,7 @@ public class AccountCommandService(
             throw new InvalidCredentialsException();
         }
 
-        var random = new Random();
-        var code = random.Next(100000, 999999).ToString();
+        var code = System.Security.Cryptography.RandomNumberGenerator.GetInt32(100000, 1000000).ToString();
 
         var verificationCode = new VerificationCode
         {

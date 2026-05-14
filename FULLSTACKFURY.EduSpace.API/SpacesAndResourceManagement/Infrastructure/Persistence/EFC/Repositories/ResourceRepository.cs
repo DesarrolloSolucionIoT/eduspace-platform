@@ -33,10 +33,10 @@ public class ResourceRepository(AppDbContext context) : BaseRepository<Resource>
             .ToListAsync();
     }
 
-    public async Task<bool> ExistsByNameAsync(string name)
+    public async Task<bool> ExistsByNameAndClassroomIdAsync(string name, int classroomId)
     {
         return await Context.Set<Resource>()
-            .AnyAsync(r => r.Name == name);
+            .AnyAsync(r => r.Name == name && r.ClassroomId == classroomId);
     }
 
     public async Task<bool> ExistsByIdAsync(int resourceId)

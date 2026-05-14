@@ -19,7 +19,7 @@ public class TokenService(
     public string GenerateToken(Account account)
     {
         var secret = _tokenSettings.Secret;
-        var key = Encoding.ASCII.GetBytes(secret);
+        var key = Encoding.UTF8.GetBytes(secret);
         var now = DateTime.UtcNow;
         var lifetime = TimeSpan.FromMinutes(_tokenSettings.AccessTokenLifetimeMinutes);
 

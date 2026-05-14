@@ -20,8 +20,8 @@ public class ResourceCommandService(
         var classroom = await classroomRepository.FindByIdAsync(command.ClassroomId);
         if (classroom is null) throw new ClassroomNotFoundException(command.ClassroomId);
 
-        if (await resourceRepository.ExistsByNameAsync(command.Name))
-            throw new InvalidResourceDataException($"A resource named '{command.Name}' already exists.");
+        if (await resourceRepository.ExistsByNameAndClassroomIdAsync(command.Name, command.ClassroomId))
+            throw new InvalidResourceDataException($"A resource named '{command.Name}' already exists in this classroom.");
 
         var resource = new Resource(command);
         await resourceRepository.AddAsync(resource);

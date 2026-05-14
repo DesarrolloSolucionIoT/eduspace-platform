@@ -77,8 +77,7 @@ public class MeetingCommandService(
 
         meeting.UpdateTitle(command.Title);
         meeting.UpdateDescription(command.Description);
-        meeting.UpdateDate(command.Date);
-        meeting.UpdateTime(command.Start, command.End);
+        meeting.UpdateSchedule(command.Date, command.Start, command.End);
 
         meeting.UpdateAdministrator(
             command.AdministratorId,

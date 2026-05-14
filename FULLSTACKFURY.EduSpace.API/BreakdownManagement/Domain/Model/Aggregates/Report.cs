@@ -4,7 +4,7 @@ using FULLSTACKFURY.EduSpace.API.BreakdownManagement.Domain.Model.ValueObjects;
 
 namespace FULLSTACKFURY.EduSpace.API.BreakdownManagement.Domain.Model.Aggregates;
 
-public record Report
+public class Report
 {
     /// <summary>
     /// Parameterless constructor required by EF Core for rehydration.

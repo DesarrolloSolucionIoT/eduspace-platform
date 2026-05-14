@@ -20,12 +20,12 @@ public interface IResourceRepository : IBaseRepository<Resource>
     Task<IEnumerable<Resource>> FindByClassroomIdAsync(int classroomId);
 
     /// <summary>
-    ///     Verifies if  a resource exists by its name.
+    ///     Verifies if a resource with the given name already exists within the specified classroom.
+    ///     Scoped by classroom to allow the same resource name in different classrooms.
     /// </summary>
-    /// <param name="name">
-    ///     The name of the resource to verify.
-    /// </param>
-    Task<bool> ExistsByNameAsync(string name);
+    /// <param name="name">The name of the resource.</param>
+    /// <param name="classroomId">The classroom the resource belongs to.</param>
+    Task<bool> ExistsByNameAndClassroomIdAsync(string name, int classroomId);
 
     /// <summary>
     ///     Verifies if a resource exists by its identifier.
