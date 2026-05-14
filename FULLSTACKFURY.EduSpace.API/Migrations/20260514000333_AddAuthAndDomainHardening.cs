@@ -17,10 +17,6 @@ namespace FULLSTACKFURY.EduSpace.API.Migrations
                 table: "meeting_sessions");
 
             migrationBuilder.DropIndex(
-                name: "i_x_resources_classroom_id",
-                table: "resources");
-
-            migrationBuilder.DropIndex(
                 name: "i_x_meeting_sessions_teacher_id",
                 table: "meeting_sessions");
 
@@ -86,6 +82,10 @@ namespace FULLSTACKFURY.EduSpace.API.Migrations
                 table: "resources",
                 columns: new[] { "classroom_id", "name" },
                 unique: true);
+
+            migrationBuilder.DropIndex(
+                name: "i_x_resources_classroom_id",
+                table: "resources");
 
             migrationBuilder.CreateIndex(
                 name: "i_x_reports_status",
