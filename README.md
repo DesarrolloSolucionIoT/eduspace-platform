@@ -31,7 +31,6 @@
 - [Project Structure](#-project-structure)
 - [Configuration](#-configuration)
 - [Development](#-development)
-- [Testing](#-testing)
 - [Deployment](#-deployment)
 - [Contributing](#-contributing)
 - [License](#-license)
@@ -49,11 +48,12 @@ The platform manages everything from user authentication to space reservations, 
 ## ✨ Features
 
 ### 🔐 Identity & Access Management (IAM)
-- **JWT-based authentication** with secure token generation
-- **Two-Factor Authentication (2FA)** via email verification
+- **JWT access tokens** (short-lived, default 60 min) with **rotating refresh tokens** (default 14 days)
+- **Two-Factor Authentication (2FA)** via email verification (6-digit code, 10 min expiry)
 - **BCrypt password hashing** for maximum security
 - **Role-based authorization** (Administrator, Teacher)
-- Email verification with SendGrid integration
+- Strict JWT validation: `ValidateIssuer`, `ValidateAudience`, `ValidateIssuerSigningKey` all enabled
+- Email verification with SendGrid / SMTP integration
 
 ### 👥 Profile Management
 - **Teacher profiles** with comprehensive information
@@ -69,15 +69,9 @@ The platform manages everything from user authentication to space reservations, 
 
 ### 📅 Reservation Scheduling
 - **Meeting scheduling** with teacher participation
-- **Many-to-many meeting sessions** support
+- **Many-to-many meeting sessions** support via `MeetingParticipants`
 - Teacher availability management
 - Meeting audit trail for compliance
-
-### 📍 Space Reservations
-- Reserve classrooms and shared areas
-- Time-slot management with conflict prevention
-- Reservation history and tracking
-- Update and cancellation capabilities
 
 ### 🔧 Breakdown Management
 - Report maintenance issues and breakdowns
@@ -123,9 +117,7 @@ Each context is independently developed with its own domain model:
 | **Profiles** | Teacher & Administrator Profile Management |
 | **SpacesAndResourceManagement** | Classroom, Resource, Shared Area Management |
 | **ReservationScheduling** | Meeting Planning & Teacher Participation |
-| **Reservations** | Space & Resource Booking System |
 | **BreakdownManagement** | Maintenance & Incident Reporting |
-| **EventsScheduling** | Event Management *(Coming Soon)* |
 
 ### Key Design Patterns
 
@@ -334,16 +326,34 @@ Response:
   "email": "teacher@example.com",
   "role": "teacher",
   "profileId": 5,
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "refreshToken": "f3a9b6c2...",
+  "accessTokenExpiresIn": 3600
 }
 ```
 
 #### 4. Use Token in Requests
 
-Add the JWT token to the `Authorization` header:
+Add the access token to the `Authorization` header:
 
 ```http
 Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+#### 5. Refresh / Logout
+
+```http
+POST /api/v1/authentication/refresh
+Content-Type: application/json
+
+{ "refreshToken": "f3a9b6c2..." }
+```
+
+```http
+POST /api/v1/authentication/logout
+Content-Type: application/json
+
+{ "refreshToken": "f3a9b6c2..." }
 ```
 
 ### Core Endpoints
@@ -403,13 +413,12 @@ PUT    /api/v1/meeting/{id}                # Update meeting
 DELETE /api/v1/meeting/{id}                # Delete meeting
 ```
 
-#### 📍 Reservations
+#### 👥 Meeting Participants
 ```http
-GET    /api/v1/reservations                # Get all reservations
-GET    /api/v1/reservations/{id}           # Get reservation by ID
-POST   /api/v1/reservations                # Create reservation
-PUT    /api/v1/reservations/{id}           # Update reservation
-DELETE /api/v1/reservations/{id}           # Delete reservation
+GET    /api/v1/meeting-participants                          # Get all participants
+GET    /api/v1/meeting-participants/meeting/{meetingId}      # Participants by meeting
+POST   /api/v1/meeting-participants                          # Add participant
+DELETE /api/v1/meeting-participants/{id}                     # Remove participant
 ```
 
 #### 🔧 Reports (Breakdowns)
@@ -462,8 +471,7 @@ eduspace-platform/
 │   │       └── ACL/                    # Anti-Corruption Layer
 │   │
 │   ├── Profiles/                        # User Profiles
-│   ├── ReservationScheduling/           # Meetings
-│   ├── Reservations/                    # Space Reservations
+│   ├── ReservationScheduling/           # Meetings & Participants
 │   ├── SpacesAndResourceManagement/     # Facilities
 │   │
 │   ├── Shared/                          # Cross-cutting concerns
@@ -490,7 +498,13 @@ eduspace-platform/
 
 ### Database Configuration
 
-The application uses **EnsureCreated()** instead of traditional migrations. The database schema is automatically created from the DbContext configuration on first startup.
+The application uses **EF Core migrations** applied automatically on startup via `context.Database.Migrate()`. Migrations live under `FULLSTACKFURY.EduSpace.API/Migrations/`.
+
+To add a new migration after changing the model:
+
+```bash
+dotnet ef migrations add YourMigrationName --project FULLSTACKFURY.EduSpace.API
+```
 
 **Connection String Format:**
 ```
@@ -501,19 +515,23 @@ server=localhost;port=3308;user=eduspace;password=your_password;database=eduspac
 
 ### JWT Token Settings
 
-The JWT secret is configured in `appsettings.json` with a default placeholder value:
+JWT settings live under `TokenSettings` in `appsettings.json`:
 
 ```json
 {
   "TokenSettings": {
-    "Secret": "your-jwt-secret-key-here-minimum-32-characters-recommended"
+    "Secret": "your-jwt-secret-key-here-minimum-32-characters-recommended",
+    "Issuer": "EduSpace.API",
+    "Audience": "EduSpace.Clients",
+    "AccessTokenLifetimeMinutes": 60,
+    "RefreshTokenLifetimeDays": 14
   }
 }
 ```
 
 **Important**:
-- Change this value in production to a strong, random secret (minimum 32 characters)
-- You can also set it via environment variable if needed
+- Secret must be at least 32 characters; rotate in production via env vars
+- `Issuer` and `Audience` are validated on every request — keep clients in sync
 - Never commit real secrets to version control
 
 ### Email Configuration
@@ -616,6 +634,7 @@ docker-compose up -d
 6. **Configure Entity** in `Shared/Infrastructure/Persistence/EFC/Configuration/AppDbContext.cs`
 7. **Create Controller** in `[Context]/Interfaces/REST/`
 8. **Register Services** in `Program.cs`
+9. **Add an EF migration**: `dotnet ef migrations add AddYourEntity --project FULLSTACKFURY.EduSpace.API`
 
 ### Dependency Injection Pattern
 
@@ -630,32 +649,6 @@ builder.Services.AddScoped<IYourEntityCommandService, YourEntityCommandService>(
 
 // Query Service
 builder.Services.AddScoped<IYourEntityQueryService, YourEntityQueryService>();
-```
-
----
-
-## 🧪 Testing
-
-### Running Tests
-
-```bash
-# Run all tests
-dotnet test
-
-# Run with coverage
-dotnet test --collect:"XPlat Code Coverage"
-
-# Run specific test project
-dotnet test tests/Eduspace.Core.Tests/
-```
-
-### Test Structure
-
-```
-tests/
-├── Eduspace.Core.Tests/              # Unit tests
-├── Eduspace.Infrastructure.IntegrationTests/  # Integration tests
-└── Eduspace.API.Tests/               # API endpoint tests
 ```
 
 ---
