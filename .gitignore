@@ -20,3 +20,9 @@ riderModule.iml
 # Environment / secrets
 .env
 .env.*
+
+# AI / personal tooling (never commit)
+.atl/
+CLAUDE.md
+.claude/
+.codex/
