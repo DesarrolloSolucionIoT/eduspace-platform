@@ -20,6 +20,7 @@ public class AdministratorProfilesController(
     IAdminProfileQueryService profileQueryService)
     : ControllerBase
 {
+    [AllowAnonymous]
     [HttpPost]
     public async Task<IActionResult> CreateAdministratorProfile([FromBody] CreateAdminProfileResource resource)
     {
