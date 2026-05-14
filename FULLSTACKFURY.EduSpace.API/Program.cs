@@ -67,20 +67,10 @@ builder.Services.AddControllers();
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll",
-        policy =>
-        {
-            var allowedOrigins = (Environment.GetEnvironmentVariable("CORS_ALLOWED_ORIGINS") ?? "")
-                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-            if (allowedOrigins.Length == 0)
-            {
-                // Dev fallback: Vite + common Flutter web port
-                allowedOrigins = new[] { "http://localhost:5173", "http://localhost:3000" };
-            }
-
-            policy.WithOrigins(allowedOrigins)
-                .AllowAnyHeader()
-                .AllowAnyMethod();
-        });
+        policy => policy
+            .SetIsOriginAllowed(_ => true)
+            .AllowAnyHeader()
+            .AllowAnyMethod());
 });
 
 builder.Services.AddEndpointsApiExplorer();
