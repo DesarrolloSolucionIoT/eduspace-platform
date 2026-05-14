@@ -6,4 +6,5 @@ namespace FULLSTACKFURY.EduSpace.API.Profiles.Domain.Repositories;
 public interface IAdminProfileRepository : IBaseRepository<AdminProfile>
 {
     bool ExistsByAdminProfileId(int adminProfileId);
+    Task<AdminProfile?> FindByAccountIdAsync(int accountId);
 }

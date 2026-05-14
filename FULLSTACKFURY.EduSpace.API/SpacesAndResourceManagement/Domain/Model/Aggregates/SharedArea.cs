@@ -1,75 +1,93 @@
-﻿using FULLSTACKFURY.EduSpace.API.SpacesAndResourceManagement.Domain.Model.Commands.SharedArea;
+using System.ComponentModel.DataAnnotations;
+using FULLSTACKFURY.EduSpace.API.SpacesAndResourceManagement.Domain.Model.Commands.SharedArea;
+using FULLSTACKFURY.EduSpace.API.SpacesAndResourceManagement.Domain.Model.Exceptions;
 
 namespace FULLSTACKFURY.EduSpace.API.SpacesAndResourceManagement.Domain.Model.Aggregates;
 
 /// <summary>
-///     Represents a shared area in the application.
+///     Represents a shared area in the school (e.g., library, auditorium).
 /// </summary>
-/// <remarks>
-///     This class is used to represent a shared area in the application.
-/// </remarks>
 public class SharedArea
 {
-    /// <summary>
-    ///     Default constructor for the shared area entity
-    /// </summary>
+    private const int MaxCapacity = 1000;
+
+    /// <summary>EF Core parameterless constructor.</summary>
     public SharedArea()
     {
         Name = string.Empty;
         Description = string.Empty;
     }
 
-    /// <param name="name">
-    ///     The name of the shared area
-    /// </param>
-    /// <param name="capacity">
-    ///     The capacity of the shared area
-    /// </param>
-    /// <param name="description">
-    ///     The description of the shared area
-    /// </param>
+    /// <summary>Primary constructor for new shared areas.</summary>
     public SharedArea(string name, int capacity, string description) : this()
     {
+        ValidateName(name);
+        ValidateCapacity(capacity);
+        ValidateDescription(description);
         Name = name;
         Capacity = capacity;
         Description = description;
     }
 
-    public SharedArea(CreateSharedAreaCommand command) : this()
-    {
-        Name = command.Name;
-        Capacity = command.Capacity;
-        Description = command.Description;
-    }
+    /// <summary>Constructor used when creating from a <see cref="CreateSharedAreaCommand" />.</summary>
+    public SharedArea(CreateSharedAreaCommand command)
+        : this(command.Name, command.Capacity, command.Description) { }
 
-    public SharedArea(UpdateSharedAreaCommand command) : this()
-    {
-        Id = command.Id;
-        Name = command.Name;
-        Capacity = command.Capacity;
-        Description = command.Description;
-    }
+    [Key] public int Id { get; private set; }
+    public string Name { get; private set; }
+    public int Capacity { get; private set; }
+    public string Description { get; private set; }
 
-    public int Id { get; set; }
-    public string Name { get; set; }
-    public int Capacity { get; set; }
-    public string Description { get; set; }
+    /// <summary>
+    ///     Updates all mutable fields of the shared area.
+    /// </summary>
+    public void Update(string name, int capacity, string description)
+    {
+        ValidateName(name);
+        ValidateCapacity(capacity);
+        ValidateDescription(description);
+        Name = name;
+        Capacity = capacity;
+        Description = description;
+    }
 
     public void UpdateName(string name)
     {
-        if (!string.IsNullOrEmpty(name))
-            Name = name;
+        ValidateName(name);
+        Name = name;
     }
 
     public void UpdateDescription(string description)
     {
-        if (!string.IsNullOrEmpty(description))
-            Description = description;
+        ValidateDescription(description);
+        Description = description;
     }
 
     public void UpdateCapacity(int capacity)
     {
-        if (capacity > 0)
-            Capacity = capacity;
+        ValidateCapacity(capacity);
+        Capacity = capacity;
+    }
+
+    // ── private invariant guards ──────────────────────────────────────────────
+
+    private static void ValidateName(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            throw new InvalidSharedAreaDataException("Shared area name cannot be empty.");
+    }
+
+    private static void ValidateCapacity(int capacity)
+    {
+        if (capacity <= 0)
+            throw new InvalidSharedAreaDataException("Capacity must be greater than zero.");
+        if (capacity > MaxCapacity)
+            throw new InvalidSharedAreaDataException($"Capacity cannot exceed {MaxCapacity}.");
+    }
+
+    private static void ValidateDescription(string description)
+    {
+        if (string.IsNullOrWhiteSpace(description))
+            throw new InvalidSharedAreaDataException("Shared area description cannot be empty.");
     }
 }

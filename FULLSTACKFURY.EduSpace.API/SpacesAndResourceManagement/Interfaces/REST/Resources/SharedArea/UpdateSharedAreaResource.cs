@@ -1,8 +1,10 @@
-﻿namespace FULLSTACKFURY.EduSpace.API.SpacesAndResourceManagement.Interfaces.REST.Resources.SharedArea;
+using System.ComponentModel.DataAnnotations;
+
+namespace FULLSTACKFURY.EduSpace.API.SpacesAndResourceManagement.Interfaces.REST.Resources.SharedArea;
 
 public record UpdateSharedAreaResource(
     int Id,
-    string Name,
-    int Capacity,
-    string Description
+    [Required] string Name,
+    [Range(1, 1000)] int Capacity,
+    [Required] string Description
 );

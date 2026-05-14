@@ -1,15 +1,18 @@
 using System.Net.Mime;
 using FULLSTACKFURY.EduSpace.API.ReservationScheduling.Domain.Model.Commands;
+using FULLSTACKFURY.EduSpace.API.ReservationScheduling.Domain.Model.Exceptions;
 using FULLSTACKFURY.EduSpace.API.ReservationScheduling.Domain.Model.Queries;
 using FULLSTACKFURY.EduSpace.API.ReservationScheduling.Domain.Services;
 using FULLSTACKFURY.EduSpace.API.ReservationScheduling.Interfaces.REST.Resources;
 using FULLSTACKFURY.EduSpace.API.ReservationScheduling.Interfaces.REST.Transform;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace FULLSTACKFURY.EduSpace.API.ReservationScheduling.Interfaces.REST;
 
 [ApiController]
+[Authorize]
 [Route("api/v1/")]
 [Produces(MediaTypeNames.Application.Json)]
 public class MeetingsController : ControllerBase
@@ -30,6 +33,8 @@ public class MeetingsController : ControllerBase
         OperationId = "CreateMeeting"
     )]
     [SwaggerResponse(201, "The meeting was created", typeof(MeetingResource))]
+    [SwaggerResponse(400, "Validation error or referenced entity not found")]
+    [SwaggerResponse(409, "Schedule conflict")]
     public async Task<IActionResult> CreateMeeting([FromRoute] int administratorId, [FromRoute] int classroomId,
         [FromBody] CreateMeetingResource resource)
     {
@@ -38,7 +43,7 @@ public class MeetingsController : ControllerBase
         var meeting = await meetingCommandService.Handle(createMeetingCommand);
         if (meeting is null) return BadRequest("Failed to create meeting.");
         var meetingResource = MeetingResourceFromEntityAssembler.ToResourceFromEntity(meeting);
-        return Ok(meetingResource);
+        return CreatedAtAction(nameof(GetMeetingById), new { id = meeting.Id }, meetingResource);
     }
 
     [HttpGet("meetings")]
@@ -55,13 +60,27 @@ public class MeetingsController : ControllerBase
         return Ok(resources);
     }
 
+    [HttpGet("administrators/{adminId:int}/meetings")]
+    [SwaggerOperation(
+        Summary = "Gets all meetings for an administrator",
+        Description = "Retrieves a list of all meetings for a specific administrator",
+        OperationId = "GetAllMeetingsForAdmin"
+    )]
+    public async Task<IActionResult> GetAllMeetingsForAdmin([FromRoute] int adminId)
+    {
+        var query = new GetAllMeetingByAdminIdQuery(adminId);
+        var meetings = await meetingQueryService.Handle(query);
+        var resources = meetings.Select(MeetingResourceFromEntityAssembler.ToResourceFromEntity);
+        return Ok(resources);
+    }
+
     [HttpGet("teachers/{teacherId:int}/meetings")]
     [SwaggerOperation(
         Summary = "Gets all meetings for a teacher",
         Description = "Retrieves a list of all meetings for a specific teacher",
         OperationId = "GetAllMeetingsForTeacher"
     )]
-    public async Task<IActionResult> GetAllMeetingsForTeacher(int teacherId)
+    public async Task<IActionResult> GetAllMeetingsForTeacher([FromRoute] int teacherId)
     {
         var getAllMeetingsByTeacherIdQuery = new GetAllMeetingByTeacherIdQuery(teacherId);
         var meetings = await meetingQueryService.Handle(getAllMeetingsByTeacherIdQuery);
@@ -84,7 +103,7 @@ public class MeetingsController : ControllerBase
         var meeting = meetings.FirstOrDefault();
 
         if (meeting is null)
-            return NotFound(new { Message = "Meeting not found." });
+            return NotFound(new { Message = $"Meeting with ID {id} was not found." });
 
         var resource = MeetingResourceFromEntityAssembler.ToResourceFromEntity(meeting);
         return Ok(resource);
@@ -98,28 +117,17 @@ public class MeetingsController : ControllerBase
     )]
     [SwaggerResponse(200, "The meeting was updated successfully", typeof(MeetingResource))]
     [SwaggerResponse(404, "The meeting was not found")]
+    [SwaggerResponse(409, "Schedule conflict")]
     public async Task<IActionResult> UpdateMeeting([FromRoute] int id, [FromBody] UpdateMeetingResource resource)
     {
-        try
-        {
-            // Map the resource to the UpdateMeetingCommand
-            var updateMeetingCommand = UpdateMeetingCommandFromResourceAssembler.ToCommandFromResource(id, resource);
+        var updateMeetingCommand = UpdateMeetingCommandFromResourceAssembler.ToCommandFromResource(id, resource);
+        var updatedMeeting = await meetingCommandService.Handle(updateMeetingCommand);
 
-            // Handle the update command
-            var updatedMeeting = await meetingCommandService.Handle(updateMeetingCommand);
+        if (updatedMeeting is null)
+            return NotFound(new { Message = $"Meeting with ID {id} was not found." });
 
-            // If the meeting was not updated, return not found
-            if (updatedMeeting is null)
-                return NotFound(new { Message = "Meeting not found." });
-
-            // Map the updated meeting entity to the resource
-            var meetingResource = MeetingResourceFromEntityAssembler.ToResourceFromEntity(updatedMeeting);
-            return Ok(meetingResource);
-        }
-        catch (ArgumentException ex)
-        {
-            return NotFound(new { ex.Message });
-        }
+        var meetingResource = MeetingResourceFromEntityAssembler.ToResourceFromEntity(updatedMeeting);
+        return Ok(meetingResource);
     }
 
     [HttpDelete("meetings/{id:int}")]
@@ -128,23 +136,12 @@ public class MeetingsController : ControllerBase
         Description = "Deletes the meeting specified by its ID",
         OperationId = "DeleteMeeting"
     )]
-    [SwaggerResponse(200, "The meeting was deleted successfully.")]
+    [SwaggerResponse(204, "The meeting was deleted successfully.")]
     [SwaggerResponse(404, "Meeting not found.")]
     public async Task<IActionResult> DeleteMeeting([FromRoute] int id)
     {
-        try
-        {
-            var deleteMeetingCommand = new DeleteMeetingCommand(id);
-            await meetingCommandService.Handle(deleteMeetingCommand);
-            return Ok($"Meeting with ID {id} was deleted successfully.");
-        }
-        catch (ArgumentException ex)
-        {
-            return NotFound(ex.Message);
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, $"An unexpected error occurred: {ex.Message}");
-        }
+        var deleteMeetingCommand = new DeleteMeetingCommand(id);
+        await meetingCommandService.Handle(deleteMeetingCommand);
+        return NoContent();
     }
 }

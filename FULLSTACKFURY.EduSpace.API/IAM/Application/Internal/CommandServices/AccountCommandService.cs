@@ -1,6 +1,8 @@
 using FULLSTACKFURY.EduSpace.API.IAM.Application.Internal.OutboundServices;
+using FULLSTACKFURY.EduSpace.API.IAM.Application.Internal.Services;
 using FULLSTACKFURY.EduSpace.API.IAM.Domain.Model.Aggregates;
 using FULLSTACKFURY.EduSpace.API.IAM.Domain.Model.Commands;
+using FULLSTACKFURY.EduSpace.API.IAM.Domain.Model.Exceptions;
 using FULLSTACKFURY.EduSpace.API.IAM.Domain.Repository;
 using FULLSTACKFURY.EduSpace.API.IAM.Domain.Services;
 using FULLSTACKFURY.EduSpace.API.Profiles.Domain.Model.Aggregates;
@@ -9,30 +11,32 @@ using FULLSTACKFURY.EduSpace.API.ReservationScheduling.Domain.Model.Aggregates;
 using FULLSTACKFURY.EduSpace.API.ReservationScheduling.Domain.Model.Queries;
 using FULLSTACKFURY.EduSpace.API.ReservationScheduling.Domain.Services;
 using FULLSTACKFURY.EduSpace.API.Shared.Domain.Repositories;
-using FULLSTACKFURY.EduSpace.API.Shared.Infrastructure.Persistence.EFC.Repositories;
 using FULLSTACKFURY.EduSpace.API.SpacesAndResourceManagement.Domain.Model.Aggregates;
 using FULLSTACKFURY.EduSpace.API.SpacesAndResourceManagement.Domain.Model.Queries;
 using FULLSTACKFURY.EduSpace.API.SpacesAndResourceManagement.Domain.Services;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace FULLSTACKFURY.EduSpace.API.IAM.Application.Internal.CommandServices;
 
 public class AccountCommandService(
     IUnitOfWork unitOfWork,
     IAccountRepository accountRepository,
+    IVerificationCodeRepository verificationCodeRepository,
     ITokenService tokenService,
     IHashingService hashingService,
     IEmailService emailService,
+    IRefreshTokenService refreshTokenService,
     ITeacherProfileRepository teacherProfileRepository,
     IAdminProfileRepository adminProfileRepository,
     IClassroomQueryService classroomQueryService,
-    IMeetingQueryService meetingQueryService)
+    IMeetingQueryService meetingQueryService,
+    ILogger<AccountCommandService> logger)
     : IAccountCommandService
 {
     public async Task Handle(SignUpCommand command)
     {
         if (accountRepository.ExistsByUsername(command.Username))
-            throw new Exception($"Username {command.Username} is already taken");
+            throw new InvalidCredentialsException($"Username {command.Username} is already taken.");
 
         var hashedPassword = hashingService.HashPassword(command.Password);
         var account = new Account(command.Username, hashedPassword, command.Role);
@@ -41,10 +45,12 @@ public class AccountCommandService(
         {
             await accountRepository.AddAsync(account);
             await unitOfWork.CompleteAsync();
+            logger.LogDebug("Account created for username {Username}", command.Username);
         }
         catch (Exception e)
         {
-            throw new Exception($"An error occured while creating the account: {e.Message}");
+            logger.LogError(e, "Error creating account for username {Username}", command.Username);
+            throw new InvalidOperationException($"An error occurred while creating the account: {e.Message}", e);
         }
     }
 
@@ -52,7 +58,10 @@ public class AccountCommandService(
     {
         var account = await accountRepository.FindByUsername(command.Username);
         if (account is null || !hashingService.VerifyPassword(command.Password, account.PasswordHash))
-            throw new ArgumentException("Invalid username or password");
+        {
+            logger.LogWarning("Failed sign-in attempt for username {Username}", command.Username);
+            throw new InvalidCredentialsException();
+        }
 
         var random = new Random();
         var code = random.Next(100000, 999999).ToString();
@@ -61,60 +70,65 @@ public class AccountCommandService(
         {
             AccountId = account.Id,
             Code = code,
-            ExpirationDate = DateTime.UtcNow.AddMinutes(10),
-            IsUsed = false
+            ExpirationDate = DateTime.UtcNow.AddMinutes(10)
         };
 
-        if (unitOfWork is UnitOfWork dbContextUnitOfWork)
-        {
-            await dbContextUnitOfWork._context.Set<VerificationCode>().AddAsync(verificationCode);
-            await unitOfWork.CompleteAsync();
-        }
-        else
-        {
-            throw new InvalidOperationException("The configured unit of work is not a supported type.");
-        }
-
-        string? userEmail = null;
-        var teacherProfiles = await teacherProfileRepository.ListAsync();
-        var teacher = teacherProfiles.FirstOrDefault(t => t.AccountId.Id == account.Id);
-
-        if (teacher != null)
-        {
-            userEmail = teacher.ProfilePrivateInformation.ObtainEmail;
-        }
-        else
-        {
-            var adminProfiles = await adminProfileRepository.ListAsync();
-            var admin = adminProfiles.FirstOrDefault(a => a.AccountId.Id == account.Id);
-            if (admin != null) userEmail = admin.ProfilePrivateInformation.ObtainEmail;
-        }
-
-        if (string.IsNullOrEmpty(userEmail)) throw new Exception("User email not found.");
-
-        await emailService.SendEmailAsync(userEmail, "Tu código de verificación de EduSpace", $"Tu código es: {code}");
-    }
-
-    public async
-        Task<(Account account, string token, int? profileId, TeacherProfile? teacherProfile, AdminProfile? adminProfile,
-            IEnumerable<Classroom>? classrooms, IEnumerable<Meeting>? meetings)> Handle(VerifyCodeCommand command)
-    {
-        var account = await accountRepository.FindByUsername(command.Username);
-        if (account is null) throw new Exception("Invalid username.");
-
-        if (unitOfWork is not UnitOfWork dbContextUnitOfWork) throw new Exception("Database context not available");
-
-        var verificationCode = await dbContextUnitOfWork._context.Set<VerificationCode>()
-            .FirstOrDefaultAsync(vc =>
-                vc.AccountId == account.Id && vc.Code == command.Code && !vc.IsUsed &&
-                vc.ExpirationDate > DateTime.UtcNow);
-
-        if (verificationCode is null) throw new Exception("Invalid or expired verification code.");
-
-        verificationCode.IsUsed = true;
+        await verificationCodeRepository.AddAsync(verificationCode);
         await unitOfWork.CompleteAsync();
 
-        var token = tokenService.GenerateToken(account);
+        // Resolve user email via Profiles ACL (N+1 fixed — uses targeted lookup)
+        string? userEmail = null;
+        var teacher = await teacherProfileRepository.FindByAccountIdAsync(account.Id);
+        if (teacher != null)
+        {
+            userEmail = teacher.ProfilePrivateInformation.Email;
+        }
+        else
+        {
+            var admin = await adminProfileRepository.FindByAccountIdAsync(account.Id);
+            if (admin != null) userEmail = admin.ProfilePrivateInformation.Email;
+        }
+
+        if (string.IsNullOrEmpty(userEmail))
+        {
+            logger.LogWarning("No profile email found for account {AccountId}", account.Id);
+            throw new AccountNotFoundException("User profile email not found. Please complete your profile setup.");
+        }
+
+        await emailService.SendEmailAsync(
+            userEmail,
+            "Tu código de verificación de EduSpace",
+            $"Tu código es: {code}");
+
+        logger.LogDebug("Verification code sent to account {AccountId}", account.Id);
+    }
+
+    public async Task<(Account account, string accessToken, string refreshToken, int? profileId,
+        TeacherProfile? teacherProfile, AdminProfile? adminProfile,
+        IEnumerable<Classroom>? classrooms, IEnumerable<Meeting>? meetings)>
+        Handle(VerifyCodeCommand command)
+    {
+        var account = await accountRepository.FindByUsername(command.Username);
+        if (account is null)
+        {
+            logger.LogWarning("Verify code attempted for unknown username {Username}", command.Username);
+            throw new AccountNotFoundException();
+        }
+
+        var verificationCode = await verificationCodeRepository
+            .FindActiveByAccountIdAndCodeAsync(account.Id, command.Code);
+
+        if (verificationCode is null)
+        {
+            logger.LogWarning("Invalid or expired verification code for account {AccountId}", account.Id);
+            throw new InvalidVerificationCodeException();
+        }
+
+        verificationCode.MarkAsUsed();
+        await unitOfWork.CompleteAsync();
+
+        var accessToken = tokenService.GenerateToken(account);
+        var (rawRefreshToken, _) = await refreshTokenService.CreateForAccountAsync(account.Id);
 
         int? profileId = null;
         TeacherProfile? teacherProfile = null;
@@ -124,24 +138,46 @@ public class AccountCommandService(
 
         if (account.GetRole() == "RoleTeacher")
         {
-            teacherProfile = await teacherProfileRepository.ListAsync()
-                .ContinueWith(t => t.Result.FirstOrDefault(p => p.AccountId.Id == account.Id));
+            teacherProfile = await teacherProfileRepository.FindByAccountIdAsync(account.Id);
             profileId = teacherProfile?.Id;
 
             if (teacherProfile != null)
             {
-                classrooms =
-                    await classroomQueryService.Handle(new GetAllClassroomsByTeacherIdQuery(teacherProfile.Id));
-                meetings = await meetingQueryService.Handle(new GetAllMeetingByTeacherIdQuery(teacherProfile.Id));
+                classrooms = await classroomQueryService.Handle(
+                    new GetAllClassroomsByTeacherIdQuery(teacherProfile.Id));
+                meetings = await meetingQueryService.Handle(
+                    new GetAllMeetingByTeacherIdQuery(teacherProfile.Id));
             }
         }
         else if (account.GetRole() == "RoleAdmin")
         {
-            adminProfile = await adminProfileRepository.ListAsync()
-                .ContinueWith(t => t.Result.FirstOrDefault(p => p.AccountId.Id == account.Id));
+            adminProfile = await adminProfileRepository.FindByAccountIdAsync(account.Id);
             profileId = adminProfile?.Id;
         }
 
-        return (account, token, profileId, teacherProfile, adminProfile, classrooms, meetings);
+        logger.LogDebug("Account {AccountId} successfully authenticated", account.Id);
+        return (account, accessToken, rawRefreshToken, profileId, teacherProfile, adminProfile, classrooms, meetings);
+    }
+
+    public async Task<(string newAccessToken, string newRefreshToken)> Handle(RefreshAccessTokenCommand command)
+    {
+        var (newRaw, _, oldEntity) = await refreshTokenService.RotateAsync(command.RefreshToken);
+
+        var account = await accountRepository.FindByIdAsync(oldEntity.AccountId);
+        if (account is null)
+        {
+            logger.LogWarning("Account {AccountId} not found during token refresh", oldEntity.AccountId);
+            throw new AccountNotFoundException();
+        }
+
+        var newAccessToken = tokenService.GenerateToken(account);
+        logger.LogDebug("Access token refreshed for account {AccountId}", account.Id);
+        return (newAccessToken, newRaw);
+    }
+
+    public async Task Handle(LogoutCommand command)
+    {
+        await refreshTokenService.RevokeAsync(command.RefreshToken);
+        logger.LogDebug("Logout: refresh token revoked");
     }
 }

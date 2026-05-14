@@ -1,5 +1,6 @@
 using System.Net.Mime;
 using FULLSTACKFURY.EduSpace.API.Profiles.Domain.Model.Commands;
+using FULLSTACKFURY.EduSpace.API.Profiles.Domain.Model.Exceptions;
 using FULLSTACKFURY.EduSpace.API.Profiles.Domain.Model.Queries;
 using FULLSTACKFURY.EduSpace.API.Profiles.Domain.Services;
 using FULLSTACKFURY.EduSpace.API.Profiles.Interfaces.REST.Resources;
@@ -26,7 +27,6 @@ public class AdministratorProfilesController(
         if (adminProfile is null) return BadRequest();
 
         var adminProfileResource = AdminProfileResourceFromEntityAssembler.ToResourceFromEntity(adminProfile);
-
         return Ok(adminProfileResource);
     }
 
@@ -40,7 +40,7 @@ public class AdministratorProfilesController(
     }
 
     [HttpGet("{administratorId:int}")]
-    public async Task<IActionResult> GetTeacherProfileById([FromRoute] int administratorId)
+    public async Task<IActionResult> GetAdministratorProfileById([FromRoute] int administratorId)
     {
         var administratorProfile =
             await profileQueryService.Handle(new GetAdministratorProfileByIdQuery(administratorId));
@@ -72,7 +72,7 @@ public class AdministratorProfilesController(
             var profileResource = AdminProfileResourceFromEntityAssembler.ToResourceFromEntity(updatedProfile);
             return Ok(profileResource);
         }
-        catch (ArgumentException ex)
+        catch (AdminProfileNotFoundException ex)
         {
             return NotFound(new { ex.Message });
         }
@@ -94,7 +94,7 @@ public class AdministratorProfilesController(
             await profileCommandService.Handle(deleteCommand);
             return Ok(new { Message = $"Administrator profile with ID {administratorId} was deleted successfully." });
         }
-        catch (ArgumentException ex)
+        catch (AdminProfileNotFoundException ex)
         {
             return NotFound(new { ex.Message });
         }

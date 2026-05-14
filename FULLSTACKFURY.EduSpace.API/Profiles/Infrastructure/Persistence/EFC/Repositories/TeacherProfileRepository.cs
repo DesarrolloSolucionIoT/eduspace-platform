@@ -9,22 +9,22 @@ namespace FULLSTACKFURY.EduSpace.API.Profiles.Infrastructure.Persistence.EFC.Rep
 public class TeacherProfileRepository(AppDbContext context)
     : BaseRepository<TeacherProfile>(context), ITeacherProfileRepository
 {
-    public async Task<IEnumerable<TeacherProfile>> FindAllTeachersByAdministratorIdAsync(int id)
-    {
-        return await Context.Set<TeacherProfile>()
-            .Where(t => t.AdministratorId == id)
-            .ToListAsync();
-    }
-
     public bool ExistsByTeacherProfileId(int teacherProfileId)
     {
-        return Context.Set<TeacherProfile>().Any(teacherProfile => teacherProfile.Id == teacherProfileId);
+        return Context.Set<TeacherProfile>().Any(tp => tp.Id == teacherProfileId);
+    }
+
+    public async Task<TeacherProfile?> FindByAccountIdAsync(int accountId)
+    {
+        return await Context.Set<TeacherProfile>()
+            .AsNoTracking()
+            .FirstOrDefaultAsync(tp => tp.AccountId.Id == accountId);
     }
 
     public override async Task<IEnumerable<TeacherProfile>> ListAsync()
     {
         return await Context.Set<TeacherProfile>()
-            .Include(p => p.AccountId)
+            .AsNoTracking()
             .ToListAsync();
     }
 }

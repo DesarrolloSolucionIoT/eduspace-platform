@@ -1,6 +1,8 @@
 using FULLSTACKFURY.EduSpace.API.Profiles.Application.Internal.OutboundServices.ACL;
 using FULLSTACKFURY.EduSpace.API.Profiles.Domain.Model.Aggregates;
 using FULLSTACKFURY.EduSpace.API.Profiles.Domain.Model.Commands;
+using FULLSTACKFURY.EduSpace.API.Profiles.Domain.Model.Constants;
+using FULLSTACKFURY.EduSpace.API.Profiles.Domain.Model.Exceptions;
 using FULLSTACKFURY.EduSpace.API.Profiles.Domain.Repositories;
 using FULLSTACKFURY.EduSpace.API.Profiles.Domain.Services;
 using FULLSTACKFURY.EduSpace.API.Shared.Domain.Repositories;
@@ -10,24 +12,29 @@ namespace FULLSTACKFURY.EduSpace.API.Profiles.Application.Internal.CommandServic
 public class TeacherProfileCommandService(
     ITeacherProfileRepository teacherProfileRepository,
     IUnitOfWork unitOfWork,
-    IExternalIamService externalIamService)
+    IExternalIamService externalIamService,
+    ILogger<TeacherProfileCommandService> logger)
     : ITeacherProfileCommandService
 {
     public async Task<TeacherProfile?> Handle(CreateTeacherProfileCommand command)
     {
         try
         {
-            var accountId = externalIamService.CreateAccount(command.Username, command.Password, "RoleTeacher");
-            var teacherProfile = new TeacherProfile(command, accountId.Result);
+            var accountId = await externalIamService.CreateAccount(command.Username, command.Password, ProfileRoles.Teacher);
+            var teacherProfile = new TeacherProfile(command, accountId);
 
             await teacherProfileRepository.AddAsync(teacherProfile);
             await unitOfWork.CompleteAsync();
 
             return teacherProfile;
         }
+        catch (InvalidProfileDataException)
+        {
+            throw;
+        }
         catch (Exception e)
         {
-            Console.WriteLine($"An error occurred while creating the profile {e.Message}");
+            logger.LogError(e, "An unexpected error occurred while creating teacher profile for username {Username}", command.Username);
             return null;
         }
     }
@@ -35,7 +42,7 @@ public class TeacherProfileCommandService(
     public async Task<TeacherProfile?> Handle(UpdateTeacherProfileCommand command)
     {
         var teacherProfile = await teacherProfileRepository.FindByIdAsync(command.Id);
-        if (teacherProfile == null) throw new ArgumentException($"Teacher profile with ID {command.Id} not found.");
+        if (teacherProfile is null) throw new TeacherProfileNotFoundException(command.Id);
 
         teacherProfile.Update(command);
         teacherProfileRepository.Update(teacherProfile);
@@ -47,7 +54,7 @@ public class TeacherProfileCommandService(
     public async Task Handle(DeleteTeacherProfileCommand command)
     {
         var teacherProfile = await teacherProfileRepository.FindByIdAsync(command.Id);
-        if (teacherProfile == null) throw new ArgumentException($"Teacher profile with ID {command.Id} not found.");
+        if (teacherProfile is null) throw new TeacherProfileNotFoundException(command.Id);
 
         teacherProfileRepository.Remove(teacherProfile);
         await unitOfWork.CompleteAsync();

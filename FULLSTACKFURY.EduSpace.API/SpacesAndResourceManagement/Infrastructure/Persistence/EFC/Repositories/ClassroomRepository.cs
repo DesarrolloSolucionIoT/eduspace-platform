@@ -1,4 +1,4 @@
-﻿using FULLSTACKFURY.EduSpace.API.Shared.Infrastructure.Persistence.EFC.Configuration;
+using FULLSTACKFURY.EduSpace.API.Shared.Infrastructure.Persistence.EFC.Configuration;
 using FULLSTACKFURY.EduSpace.API.Shared.Infrastructure.Persistence.EFC.Repositories;
 using FULLSTACKFURY.EduSpace.API.SpacesAndResourceManagement.Domain.Model.Aggregates;
 using FULLSTACKFURY.EduSpace.API.SpacesAndResourceManagement.Domain.Repositories;
@@ -8,42 +8,37 @@ namespace FULLSTACKFURY.EduSpace.API.SpacesAndResourceManagement.Infrastructure.
 
 public class ClassroomRepository(AppDbContext context) : BaseRepository<Classroom>(context), IClassroomRepository
 {
-    // InheritedDoc
     public async Task<IEnumerable<Classroom>> FindByTeacherIdAsync(int teacherId)
     {
         return await Context.Set<Classroom>()
-            .Where(classroom => classroom.TeacherId.TeacherIdentifier == teacherId)
+            .AsNoTracking()
+            .Where(c => c.TeacherId.TeacherIdentifier == teacherId)
             .ToListAsync();
     }
 
-    // InheritedDoc
     public new async Task<Classroom?> FindByIdAsync(int id)
     {
         return await Context.Set<Classroom>()
-            .FirstOrDefaultAsync(classroom => classroom.Id == id);
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.Id == id);
     }
 
-    // InheritedDoc
     public new async Task<IEnumerable<Classroom>> ListAsync()
     {
         return await Context.Set<Classroom>()
+            .AsNoTracking()
             .ToListAsync();
     }
 
-    // InheritedDoc
     public async Task<bool> ExistsByNameAsync(string name)
     {
         return await Context.Set<Classroom>()
-            .AnyAsync(classroom => classroom.Name == name);
+            .AnyAsync(c => c.Name == name);
     }
 
-    public bool ExistsByClassroomId(int id)
+    public async Task<bool> ExistsByClassroomIdAsync(int id)
     {
-        return Context.Set<Classroom>().Any(classroom => classroom.Id == id);
-    }
-
-    public bool ExistsByClassroomName(string name)
-    {
-        return Context.Set<Classroom>().Any(classroom => classroom.Name == name);
+        return await Context.Set<Classroom>()
+            .AnyAsync(c => c.Id == id);
     }
 }

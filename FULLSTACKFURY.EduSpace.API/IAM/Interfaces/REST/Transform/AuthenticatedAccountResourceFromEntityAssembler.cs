@@ -1,8 +1,10 @@
 using FULLSTACKFURY.EduSpace.API.IAM.Domain.Model.Aggregates;
+using FULLSTACKFURY.EduSpace.API.IAM.Infrastructure.Tokens.JWT.Configuration;
 using FULLSTACKFURY.EduSpace.API.IAM.Interfaces.REST.Resources;
 using FULLSTACKFURY.EduSpace.API.Profiles.Domain.Model.Aggregates;
 using FULLSTACKFURY.EduSpace.API.ReservationScheduling.Domain.Model.Aggregates;
 using FULLSTACKFURY.EduSpace.API.SpacesAndResourceManagement.Domain.Model.Aggregates;
+using Microsoft.Extensions.Options;
 
 namespace FULLSTACKFURY.EduSpace.API.IAM.Interfaces.REST.Transform;
 
@@ -10,7 +12,9 @@ public static class AuthenticatedAccountResourceFromEntityAssembler
 {
     public static AuthenticatedAccountResource ToResourceFromEntity(
         Account entity,
-        string token,
+        string accessToken,
+        string refreshToken,
+        int accessTokenLifetimeMinutes,
         int? profileId,
         TeacherProfile? teacherProfile = null,
         AdminProfile? adminProfile = null,
@@ -24,8 +28,8 @@ public static class AuthenticatedAccountResourceFromEntityAssembler
                 teacherProfile.Id,
                 teacherProfile.ProfileName.FirstName,
                 teacherProfile.ProfileName.LastName,
-                teacherProfile.ProfilePrivateInformation.ObtainEmail,
-                teacherProfile.ProfilePrivateInformation.ObtainDni,
+                teacherProfile.ProfilePrivateInformation.Email,
+                teacherProfile.ProfilePrivateInformation.Dni,
                 teacherProfile.ProfilePrivateInformation.Address,
                 teacherProfile.ProfilePrivateInformation.Phone,
                 teacherProfile.AdministratorId
@@ -35,8 +39,8 @@ public static class AuthenticatedAccountResourceFromEntityAssembler
                 adminProfile.Id,
                 adminProfile.ProfileName.FirstName,
                 adminProfile.ProfileName.LastName,
-                adminProfile.ProfilePrivateInformation.ObtainEmail,
-                adminProfile.ProfilePrivateInformation.ObtainDni,
+                adminProfile.ProfilePrivateInformation.Email,
+                adminProfile.ProfilePrivateInformation.Dni,
                 adminProfile.ProfilePrivateInformation.Address,
                 adminProfile.ProfilePrivateInformation.Phone,
                 adminProfile.Id
@@ -58,7 +62,9 @@ public static class AuthenticatedAccountResourceFromEntityAssembler
             profileId,
             entity.Username,
             entity.GetRole(),
-            token,
+            accessToken,
+            refreshToken,
+            accessTokenLifetimeMinutes * 60,
             profileData,
             classroomData,
             meetingData

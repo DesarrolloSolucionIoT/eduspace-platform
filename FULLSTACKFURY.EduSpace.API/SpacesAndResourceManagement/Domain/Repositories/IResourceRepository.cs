@@ -26,4 +26,10 @@ public interface IResourceRepository : IBaseRepository<Resource>
     ///     The name of the resource to verify.
     /// </param>
     Task<bool> ExistsByNameAsync(string name);
+
+    /// <summary>
+    ///     Verifies if a resource exists by its identifier.
+    /// </summary>
+    /// <param name="resourceId">The resource identifier.</param>
+    Task<bool> ExistsByIdAsync(int resourceId);
 }

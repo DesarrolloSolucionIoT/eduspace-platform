@@ -1,4 +1,4 @@
-﻿using FULLSTACKFURY.EduSpace.API.Shared.Infrastructure.Persistence.EFC.Configuration;
+using FULLSTACKFURY.EduSpace.API.Shared.Infrastructure.Persistence.EFC.Configuration;
 using FULLSTACKFURY.EduSpace.API.Shared.Infrastructure.Persistence.EFC.Repositories;
 using FULLSTACKFURY.EduSpace.API.SpacesAndResourceManagement.Domain.Model.Aggregates;
 using FULLSTACKFURY.EduSpace.API.SpacesAndResourceManagement.Domain.Repositories;
@@ -8,24 +8,23 @@ namespace FULLSTACKFURY.EduSpace.API.SpacesAndResourceManagement.Infrastructure.
 
 public class SharedAreaRepository(AppDbContext context) : BaseRepository<SharedArea>(context), ISharedAreaRepository
 {
-    /// <Inheritdoc />
     public new async Task<SharedArea?> FindByIdAsync(int id)
     {
         return await Context.Set<SharedArea>()
-            .FirstOrDefaultAsync(sharedArea => sharedArea.Id == id);
+            .AsNoTracking()
+            .FirstOrDefaultAsync(sa => sa.Id == id);
     }
 
-    /// <Inheritdoc />
     public new async Task<IEnumerable<SharedArea>> ListAsync()
     {
         return await Context.Set<SharedArea>()
+            .AsNoTracking()
             .ToListAsync();
     }
 
-    /// <Inheritdoc />
     public async Task<bool> ExistsByNameAsync(string name)
     {
         return await Context.Set<SharedArea>()
-            .AnyAsync(sharedArea => sharedArea.Name == name);
+            .AnyAsync(sa => sa.Name == name);
     }
 }

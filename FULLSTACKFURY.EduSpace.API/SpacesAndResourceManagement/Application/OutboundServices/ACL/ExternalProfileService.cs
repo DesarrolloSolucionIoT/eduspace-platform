@@ -4,8 +4,10 @@ namespace FULLSTACKFURY.EduSpace.API.SpacesAndResourceManagement.Application.Out
 
 public class ExternalProfileService(IProfilesContextFacade profilesContextFacade) : IExternalProfileService
 {
-    public bool VerifyProfile(int teacherProfileId)
+    public Task<bool> VerifyProfileAsync(int teacherProfileId)
     {
-        return profilesContextFacade.ValidateTeacherProfileIdExistence(teacherProfileId);
+        // IProfilesContextFacade.ValidateTeacherProfileIdExistence is synchronous (cross-BC constraint).
+        // Wrapped in Task.FromResult so callers can stay async without blocking.
+        return Task.FromResult(profilesContextFacade.ValidateTeacherProfileIdExistence(teacherProfileId));
     }
 }

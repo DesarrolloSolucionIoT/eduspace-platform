@@ -5,6 +5,11 @@ namespace FULLSTACKFURY.EduSpace.API.Profiles.Domain.Model.Aggregates;
 
 public class AdminProfile : Profile
 {
+    // EF Core ctor
+    private AdminProfile()
+    {
+    }
+
     public AdminProfile(string firstName, string lastName, string email, string dni, string address, string phone,
         AccountId accountId)
         : base(firstName, lastName, email, dni, address, phone, accountId)
@@ -17,15 +22,10 @@ public class AdminProfile : Profile
     {
     }
 
-    public AdminProfile()
-    {
-    }
-
     public AdminProfile Update(UpdateAdminProfileCommand command)
     {
-        ProfileName = new ProfileName(command.FirstName, command.LastName);
-        ProfilePrivateInformation =
-            new ProfilePrivateInformation(command.Email, command.Dni, command.Address, command.Phone);
+        UpdateProfileName(command.FirstName, command.LastName);
+        UpdatePrivateInformation(command.Email, command.Dni, command.Address, command.Phone);
         return this;
     }
 }

@@ -12,7 +12,12 @@ public class VerificationCode
     public int AccountId { get; set; }
     public string Code { get; set; }
     public DateTime ExpirationDate { get; set; }
-    public bool IsUsed { get; set; }
+    public bool IsUsed { get; private set; }
 
     public Account Account { get; set; }
+
+    public void MarkAsUsed()
+    {
+        IsUsed = true;
+    }
 }

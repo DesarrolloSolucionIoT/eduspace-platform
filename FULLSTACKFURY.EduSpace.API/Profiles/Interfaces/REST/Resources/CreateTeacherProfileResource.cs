@@ -1,14 +1,16 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace FULLSTACKFURY.EduSpace.API.Profiles.Interfaces.REST.Resources;
 
 public record CreateTeacherProfileResource(
-    string FirstName,
-    string LastName,
-    string Email,
-    string Dni,
-    string Address,
-    string Phone,
+    [Required] string FirstName,
+    [Required] string LastName,
+    [Required][EmailAddress] string Email,
+    [Required][RegularExpression(@"^\d{8}$", ErrorMessage = "DNI must be exactly 8 digits.")] string Dni,
+    [Required] string Address,
+    [Required][RegularExpression(@"^9\d{8}$", ErrorMessage = "Phone must be 9 digits starting with 9.")] string Phone,
     int AdministratorId,
-    string Username,
-    string Password)
+    [Required] string Username,
+    [Required] string Password)
 {
 }

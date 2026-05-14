@@ -1,34 +1,19 @@
-﻿using FULLSTACKFURY.EduSpace.API.Shared.Domain.Repositories;
+using FULLSTACKFURY.EduSpace.API.Shared.Domain.Repositories;
 using FULLSTACKFURY.EduSpace.API.SpacesAndResourceManagement.Domain.Model.Aggregates;
 
 namespace FULLSTACKFURY.EduSpace.API.SpacesAndResourceManagement.Domain.Repositories;
 
 /// <summary>
-///     Represents the classroom repository in the EduSpace Platform
+///     Repository interface for <see cref="Classroom" /> aggregates.
 /// </summary>
 public interface IClassroomRepository : IBaseRepository<Classroom>
 {
-    /// <summary>
-    ///     Finds a classroom by teacher id asynchronously
-    /// </summary>
-    /// <param name="teacherId">
-    ///     The id of the teacher  to find classrooms by.
-    /// </param>
-    /// <returns>
-    ///     A collection of classrooms that belong to the teacher.
-    /// </returns>
+    /// <summary>Returns all classrooms assigned to a given teacher.</summary>
     Task<IEnumerable<Classroom>> FindByTeacherIdAsync(int teacherId);
 
-    /// <summary>
-    ///     Verify if a classroom with specified title exists.
-    /// </summary>
-    /// <param name="name">
-    ///     The title of the classroom to verify.
-    /// </param>
-    /// <returns>
-    ///     True if the classroom exists, otherwise false.
-    /// </returns>
+    /// <summary>Returns <c>true</c> if a classroom with the given name already exists.</summary>
     Task<bool> ExistsByNameAsync(string name);
 
-    bool ExistsByClassroomId(int id);
+    /// <summary>Returns <c>true</c> if a classroom with the given ID exists.</summary>
+    Task<bool> ExistsByClassroomIdAsync(int id);
 }

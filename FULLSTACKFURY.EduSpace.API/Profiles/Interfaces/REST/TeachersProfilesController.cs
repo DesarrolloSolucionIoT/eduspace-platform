@@ -1,5 +1,6 @@
 using System.Net.Mime;
 using FULLSTACKFURY.EduSpace.API.Profiles.Domain.Model.Commands;
+using FULLSTACKFURY.EduSpace.API.Profiles.Domain.Model.Exceptions;
 using FULLSTACKFURY.EduSpace.API.Profiles.Domain.Model.Queries;
 using FULLSTACKFURY.EduSpace.API.Profiles.Domain.Services;
 using FULLSTACKFURY.EduSpace.API.Profiles.Interfaces.REST.Resources;
@@ -31,8 +32,7 @@ public class TeachersProfilesController(
     public async Task<IActionResult> GetAllTeacherProfiles()
     {
         var teacherProfiles = await teacherQueryService.Handle(new GetAllTeachersProfileQuery());
-        var teacherResources
-            = teacherProfiles.Select(TeacherProfileResourceFromEntityAssembler.ToResourceFromEntity);
+        var teacherResources = teacherProfiles.Select(TeacherProfileResourceFromEntityAssembler.ToResourceFromEntity);
         return Ok(teacherResources);
     }
 
@@ -68,7 +68,7 @@ public class TeachersProfilesController(
             var profileResource = TeacherProfileResourceFromEntityAssembler.ToResourceFromEntity(updatedProfile);
             return Ok(profileResource);
         }
-        catch (ArgumentException ex)
+        catch (TeacherProfileNotFoundException ex)
         {
             return NotFound(new { ex.Message });
         }
@@ -90,7 +90,7 @@ public class TeachersProfilesController(
             await teacherProfileCommandService.Handle(deleteCommand);
             return Ok(new { Message = $"Teacher profile with ID {teacherId} was deleted successfully." });
         }
-        catch (ArgumentException ex)
+        catch (TeacherProfileNotFoundException ex)
         {
             return NotFound(new { ex.Message });
         }

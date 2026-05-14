@@ -3,13 +3,16 @@ using System.Text;
 using FULLSTACKFURY.EduSpace.API.IAM.Application.Internal.OutboundServices;
 using FULLSTACKFURY.EduSpace.API.IAM.Domain.Model.Aggregates;
 using FULLSTACKFURY.EduSpace.API.IAM.Infrastructure.Tokens.JWT.Configuration;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
 
 namespace FULLSTACKFURY.EduSpace.API.IAM.Infrastructure.Tokens.JWT.Services;
 
-public class TokenService(IOptions<TokenSettings> tokenSettings) : ITokenService
+public class TokenService(
+    IOptions<TokenSettings> tokenSettings,
+    ILogger<TokenService> logger) : ITokenService
 {
     private readonly TokenSettings _tokenSettings = tokenSettings.Value;
 
@@ -17,47 +20,36 @@ public class TokenService(IOptions<TokenSettings> tokenSettings) : ITokenService
     {
         var secret = _tokenSettings.Secret;
         var key = Encoding.ASCII.GetBytes(secret);
+        var now = DateTime.UtcNow;
+        var lifetime = TimeSpan.FromMinutes(_tokenSettings.AccessTokenLifetimeMinutes);
+
+        var claims = new List<Claim>
+        {
+            new(JwtRegisteredClaimNames.Sub, account.Id.ToString()),
+            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+            new(JwtRegisteredClaimNames.Iat, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64),
+            new(JwtRegisteredClaimNames.Nbf, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64),
+            new(ClaimTypes.Name, account.Username),
+            new(ClaimTypes.Role, account.GetRole())
+        };
+
         var tokenDescriptor = new SecurityTokenDescriptor
         {
-            Subject = new ClaimsIdentity(new[]
-            {
-                new Claim(ClaimTypes.Sid, account.Id.ToString()),
-                new Claim(ClaimTypes.Name, account.Username),
-                new Claim(ClaimTypes.Role, account.GetRole())
-            }),
-            Expires = DateTime.UtcNow.AddDays(7),
-            SigningCredentials =
-                new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
+            Issuer = _tokenSettings.Issuer,
+            Audience = _tokenSettings.Audience,
+            Subject = new ClaimsIdentity(claims),
+            IssuedAt = now,
+            NotBefore = now,
+            Expires = now.Add(lifetime),
+            SigningCredentials = new SigningCredentials(
+                new SymmetricSecurityKey(key),
+                SecurityAlgorithms.HmacSha256Signature)
         };
+
         var tokenHandler = new JsonWebTokenHandler();
         var token = tokenHandler.CreateToken(tokenDescriptor);
-        return token;
-    }
 
-    public async Task<int?> ValidateToken(string token)
-    {
-        if (string.IsNullOrEmpty(token)) return null;
-        var tokenHandler = new JsonWebTokenHandler();
-        var key = Encoding.ASCII.GetBytes(_tokenSettings.Secret);
-        try
-        {
-            var tokenValidationResult = await tokenHandler.ValidateTokenAsync(token, new TokenValidationParameters
-            {
-                ValidateIssuerSigningKey = true,
-                IssuerSigningKey = new SymmetricSecurityKey(key),
-                ValidateIssuer = false,
-                ValidateAudience = false,
-                ClockSkew = TimeSpan.Zero
-            });
-            var jwtToken = (JsonWebToken)tokenValidationResult.SecurityToken;
-            var userId = int.Parse(jwtToken.Claims
-                .First(claim => claim.Type == ClaimTypes.Sid).Value);
-            return userId;
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e);
-            return null;
-        }
+        logger.LogDebug("Access token generated for account {AccountId}", account.Id);
+        return token;
     }
 }

@@ -1,79 +1,83 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using FULLSTACKFURY.EduSpace.API.SpacesAndResourceManagement.Domain.Model.Commands.Resource;
+using FULLSTACKFURY.EduSpace.API.SpacesAndResourceManagement.Domain.Model.Exceptions;
 
 namespace FULLSTACKFURY.EduSpace.API.SpacesAndResourceManagement.Domain.Model.Aggregates;
 
 /// <summary>
-///     Represents a resource in the application.
+///     Represents a physical resource that belongs to a classroom.
 /// </summary>
-/// <remarks>
-///     A resource is a physical object that can be used in a classroom.
-/// </remarks>
 public class Resource
 {
-    /// <summary>
-    ///     Default constructor for the classroom entity
-    /// </summary>
+    /// <summary>EF Core parameterless constructor.</summary>
     public Resource()
     {
         Name = string.Empty;
         KindOfResource = string.Empty;
-        Classroom = default!;
+        Classroom = null!;
     }
 
-    /// <param name="name">
-    ///     The name of the resource
-    /// </param>
-    /// <param name="kind_of_resource">
-    ///     The kind of resource
-    /// </param>
-    /// <param name="classroomId">
-    ///     The classroom id
-    /// </param>
+    /// <summary>Primary constructor for new resources.</summary>
     public Resource(string name, string kindOfResource, int classroomId) : this()
     {
+        ValidateName(name);
+        ValidateKind(kindOfResource);
+        ValidateClassroomId(classroomId);
         Name = name;
         KindOfResource = kindOfResource;
         ClassroomId = classroomId;
     }
 
-    public Resource(CreateResourceCommand command) : this()
-    {
-        Name = command.Name;
-        KindOfResource = command.KindOfResource;
-        ClassroomId = command.ClassroomId;
-    }
-
-    public Resource(UpdateResourceCommand command) : this()
-    {
-        Id = command.Id;
-        Name = command.Name;
-        KindOfResource = command.KindOfResource;
-        ClassroomId = command.ClassroomId;
-    }
+    /// <summary>Constructor used when creating from a <see cref="CreateResourceCommand" />.</summary>
+    public Resource(CreateResourceCommand command)
+        : this(command.Name, command.KindOfResource, command.ClassroomId) { }
 
     [Key] public int Id { get; set; }
 
     public string Name { get; private set; }
     public string KindOfResource { get; private set; }
-    public Classroom Classroom { get; internal set; }
+
+    /// <summary>Navigation property — loaded by EF on query, never mutated directly.</summary>
+    public Classroom Classroom { get; private set; }
+
     public int ClassroomId { get; private set; }
 
     public void UpdateName(string name)
     {
-        if (!string.IsNullOrEmpty(name))
-            Name = name;
+        ValidateName(name);
+        Name = name;
     }
 
     public void UpdateKindOfResource(string kindOfResource)
     {
-        if (!string.IsNullOrEmpty(kindOfResource))
-            KindOfResource = kindOfResource;
+        ValidateKind(kindOfResource);
+        KindOfResource = kindOfResource;
     }
 
     public void UpdateClassroomId(int classroomId)
     {
-        if (classroomId > 0 && classroomId != ClassroomId)
+        ValidateClassroomId(classroomId);
+        if (classroomId != ClassroomId)
             ClassroomId = classroomId;
+    }
+
+    // ── private invariant guards ──────────────────────────────────────────────
+
+    private static void ValidateName(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            throw new InvalidResourceDataException("Resource name cannot be empty.");
+    }
+
+    private static void ValidateKind(string kind)
+    {
+        if (string.IsNullOrWhiteSpace(kind))
+            throw new InvalidResourceDataException("KindOfResource cannot be empty.");
+    }
+
+    private static void ValidateClassroomId(int classroomId)
+    {
+        if (classroomId <= 0)
+            throw new InvalidResourceDataException("ClassroomId must be a positive integer.");
     }
 }

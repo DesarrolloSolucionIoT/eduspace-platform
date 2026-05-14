@@ -11,13 +11,20 @@ public class AdminProfileRepository(AppDbContext context)
 {
     public bool ExistsByAdminProfileId(int adminProfileId)
     {
-        return Context.Set<AdminProfile>().Any(adminProfile => adminProfile.Id == adminProfileId);
+        return Context.Set<AdminProfile>().Any(ap => ap.Id == adminProfileId);
+    }
+
+    public async Task<AdminProfile?> FindByAccountIdAsync(int accountId)
+    {
+        return await Context.Set<AdminProfile>()
+            .AsNoTracking()
+            .FirstOrDefaultAsync(ap => ap.AccountId.Id == accountId);
     }
 
     public override async Task<IEnumerable<AdminProfile>> ListAsync()
     {
         return await Context.Set<AdminProfile>()
-            .Include(p => p.AccountId)
+            .AsNoTracking()
             .ToListAsync();
     }
 }

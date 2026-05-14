@@ -5,7 +5,7 @@ public class GetAllReportsByResourceIdQuery
     public GetAllReportsByResourceIdQuery(int resourceId)
     {
         if (resourceId <= 0)
-            throw new ArgumentException("ResourceId debe ser mayor que 0.", nameof(resourceId));
+            throw new ArgumentException("ResourceId must be greater than 0.", nameof(resourceId));
 
         ResourceId = resourceId;
     }

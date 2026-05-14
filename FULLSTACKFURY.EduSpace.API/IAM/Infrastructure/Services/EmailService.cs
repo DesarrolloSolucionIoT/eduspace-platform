@@ -50,7 +50,7 @@ public class EmailService : IEmailService
             {
                 _logger.LogError("Fallo al enviar email via SendGrid API: {StatusCode} - {Body}", response.StatusCode,
                     await response.Body.ReadAsStringAsync());
-                throw new Exception($"Failed to send email: {response.StatusCode}");
+                throw new InvalidOperationException($"Failed to send email via SendGrid: {response.StatusCode}");
             }
         }
         catch (Exception ex)

@@ -1,3 +1,4 @@
+using System.Text;
 using DotNetEnv;
 using FULLSTACKFURY.EduSpace.API.BreakdownManagement.Application.Internal.CommandServices;
 using FULLSTACKFURY.EduSpace.API.BreakdownManagement.Application.Internal.QueryServices;
@@ -7,6 +8,7 @@ using FULLSTACKFURY.EduSpace.API.BreakdownManagement.Infrastructure.Persistence.
 using FULLSTACKFURY.EduSpace.API.IAM.Application.Internal.CommandServices;
 using FULLSTACKFURY.EduSpace.API.IAM.Application.Internal.OutboundServices;
 using FULLSTACKFURY.EduSpace.API.IAM.Application.Internal.QueryServices;
+using FULLSTACKFURY.EduSpace.API.IAM.Application.Internal.Services;
 using FULLSTACKFURY.EduSpace.API.IAM.Domain.Repository;
 using FULLSTACKFURY.EduSpace.API.IAM.Domain.Services;
 using FULLSTACKFURY.EduSpace.API.IAM.Infrastructure.Hashing.BCrypt.Services;
@@ -26,7 +28,6 @@ using FULLSTACKFURY.EduSpace.API.Profiles.Infrastructure.Persistence.EFC.Reposit
 using FULLSTACKFURY.EduSpace.API.Profiles.Interfaces.ACL;
 using FULLSTACKFURY.EduSpace.API.Profiles.Interfaces.ACL.Services;
 using FULLSTACKFURY.EduSpace.API.ReservationScheduling.Application.Internal.CommandServices;
-using FULLSTACKFURY.EduSpace.API.ReservationScheduling.Application.Internal.OutboundServices;
 using FULLSTACKFURY.EduSpace.API.ReservationScheduling.Application.Internal.QueryServices;
 using FULLSTACKFURY.EduSpace.API.ReservationScheduling.Domain.Repositories;
 using FULLSTACKFURY.EduSpace.API.ReservationScheduling.Domain.Services;
@@ -42,8 +43,14 @@ using FULLSTACKFURY.EduSpace.API.SpacesAndResourceManagement.Domain.Services;
 using FULLSTACKFURY.EduSpace.API.SpacesAndResourceManagement.Infrastructure.Persistence.EFC.Repositories;
 using FULLSTACKFURY.EduSpace.API.SpacesAndResourceManagement.Interfaces.ACL;
 using FULLSTACKFURY.EduSpace.API.SpacesAndResourceManagement.Interfaces.ACL.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+
+// Namespace aliases to disambiguate multiple IExternalProfileService across BCs
+using RsvOutbound = FULLSTACKFURY.EduSpace.API.ReservationScheduling.Application.Internal.OutboundServices;
+using BrkOutbound = FULLSTACKFURY.EduSpace.API.BreakdownManagement.Application.Internal.OutboundServices;
 
 Env.Load("../.env");
 
@@ -55,17 +62,25 @@ if (string.IsNullOrEmpty(connectionString)) throw new InvalidOperationException(
 // Add services to the container.
 builder.Services.AddRouting(options => options.LowercaseUrls = true);
 builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 
-
-// Configure CORS to allow all origins (academic project)
+// Configure CORS — origins driven by environment variable for deployment flexibility.
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll",
-        policy => policy
-            .AllowAnyOrigin()
-            .AllowAnyHeader()
-            .AllowAnyMethod());
+        policy =>
+        {
+            var allowedOrigins = (Environment.GetEnvironmentVariable("CORS_ALLOWED_ORIGINS") ?? "")
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            if (allowedOrigins.Length == 0)
+            {
+                // Dev fallback: Vite + common Flutter web port
+                allowedOrigins = new[] { "http://localhost:5173", "http://localhost:3000" };
+            }
+
+            policy.WithOrigins(allowedOrigins)
+                .AllowAnyHeader()
+                .AllowAnyMethod();
+        });
 });
 
 builder.Services.AddEndpointsApiExplorer();
@@ -145,17 +160,25 @@ builder.Services.AddScoped<IAccountRepository, AccountRepository>();
 builder.Services.AddScoped<IAccountQueryService, AccountQueryService>();
 builder.Services.AddScoped<IProfilesContextFacade, ProfilesContextFacade>();
 
+// IAM — auth infrastructure
+builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+builder.Services.AddScoped<IRefreshTokenService, RefreshTokenService>();
+builder.Services.AddScoped<IVerificationCodeRepository, VerificationCodeRepository>();
+
 builder.Services.AddScoped<IReportRepository, ReportRepository>();
 builder.Services.AddScoped<IReportCommandService, ReportCommandService>();
 builder.Services.AddScoped<IReportQueryService, ReportQueryService>();
 
-//Reservation Scheduling
+// BreakdownManagement BC — ACL outbound services
+builder.Services.AddScoped<BrkOutbound.IExternalProfileService, BrkOutbound.ExternalProfileServices>();
+builder.Services.AddScoped<BrkOutbound.IExternalResourceService, BrkOutbound.ExternalResourceService>();
 
+//Reservation Scheduling
 builder.Services.AddScoped<IMeetingRepository, MeetingRepository>();
 builder.Services.AddScoped<IMeetingCommandService, MeetingCommandService>();
 builder.Services.AddScoped<IMeetingQueryService, MeetingQueryService>();
-builder.Services.AddScoped<IExternalClassroomService, ExternalClassroomServices>();
-builder.Services.AddScoped<IRExternalProfileService, RExternalProfileServices>();
+builder.Services.AddScoped<RsvOutbound.IExternalClassroomService, RsvOutbound.ExternalClassroomServices>();
+builder.Services.AddScoped<RsvOutbound.IExternalProfileService, RsvOutbound.ExternalProfileService>();
 
 // Spaces and Resource BC
 // Classrooms
@@ -171,7 +194,6 @@ builder.Services.AddScoped<IResourceCommandService, ResourceCommandService>();
 builder.Services.AddScoped<IResourceQueryService, ResourceQueryService>();
 
 builder.Services.AddScoped<ISpacesAndResourceManagementFacade, SpacesAndResourceManagementFacade>();
-
 
 // Shared Areas
 builder.Services.AddScoped<ISharedAreaRepository, SharedAreaRepository>();
@@ -189,6 +211,25 @@ if (builder.Environment.IsDevelopment())
     builder.Services.AddScoped<IEmailService, MockEmailService>();
 else
     builder.Services.AddScoped<IEmailService, EmailService>();
+
+// JWT authentication — validates tokens issued by TokenService
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        var tokenSettings = builder.Configuration.GetSection("TokenSettings").Get<TokenSettings>()
+            ?? throw new InvalidOperationException("TokenSettings missing from configuration.");
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = tokenSettings.Issuer,
+            ValidateAudience = true,
+            ValidAudience = tokenSettings.Audience,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(tokenSettings.Secret)),
+            ClockSkew = TimeSpan.FromMinutes(1)
+        };
+    });
 
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
@@ -214,6 +255,7 @@ app.UseHttpsRedirection();
 
 app.UseCors("AllowAll");
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();

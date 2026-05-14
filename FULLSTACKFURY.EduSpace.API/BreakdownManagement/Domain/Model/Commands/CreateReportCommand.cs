@@ -1,4 +1,6 @@
-﻿namespace FULLSTACKFURY.EduSpace.API.BreakdownManagement.Domain.Model.Commands;
+using FULLSTACKFURY.EduSpace.API.BreakdownManagement.Domain.Model.Exceptions;
+
+namespace FULLSTACKFURY.EduSpace.API.BreakdownManagement.Domain.Model.Commands;
 
 public record CreateReportCommand
 {
@@ -8,9 +10,16 @@ public record CreateReportCommand
         int resourceId,
         DateTime createdAt)
     {
-        KindOfReport = kindOfReport ?? throw new ArgumentException("El tipo de informe no puede ser nulo o vacío.");
+        if (string.IsNullOrWhiteSpace(kindOfReport))
+            throw new InvalidReportDataException("KindOfReport cannot be null or empty.");
+        if (string.IsNullOrWhiteSpace(description))
+            throw new InvalidReportDataException("Description cannot be null or empty.");
+        if (resourceId <= 0)
+            throw new InvalidReportDataException("ResourceId must be greater than 0.");
+
+        KindOfReport = kindOfReport;
         Description = description;
-        ResourceId = resourceId > 0 ? resourceId : throw new ArgumentException("ResourceId debe ser mayor que 0.");
+        ResourceId = resourceId;
         CreatedAt = createdAt;
     }
 

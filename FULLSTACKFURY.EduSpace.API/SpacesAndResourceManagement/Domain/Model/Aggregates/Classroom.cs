@@ -1,29 +1,16 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using FULLSTACKFURY.EduSpace.API.SpacesAndResourceManagement.Domain.Model.Commands.Classroom;
+using FULLSTACKFURY.EduSpace.API.SpacesAndResourceManagement.Domain.Model.Exceptions;
 using FULLSTACKFURY.EduSpace.API.SpacesAndResourceManagement.Domain.Model.ValueObjects;
 
 namespace FULLSTACKFURY.EduSpace.API.SpacesAndResourceManagement.Domain.Model.Aggregates;
 
 /// <summary>
-///     Classroom aggregate root entity
+///     Classroom aggregate root entity.
 /// </summary>
-/// <remarks>
-///     This class is used to represent a classroom in the application.
-/// </remarks>
 public class Classroom
 {
-    /// <summary>
-    ///     Default constructor for the classroom entity
-    /// </summary>
-    /// <param name="name">
-    ///     The name of the classroom
-    /// </param>
-    /// <param name="description">
-    ///     The description of the classroom
-    /// </param>
-    /// <param name="teacherId">
-    ///     The teacher id for the classroom
-    /// </param>
+    /// <summary>EF Core parameterless constructor.</summary>
     public Classroom()
     {
         Name = string.Empty;
@@ -31,26 +18,20 @@ public class Classroom
         TeacherId = default!;
     }
 
-    public Classroom(string name, string description, int teacherId)
+    /// <summary>Primary constructor for new classrooms.</summary>
+    public Classroom(string name, string description, int teacherId) : this()
     {
+        ValidateName(name);
+        ValidateDescription(description);
+        ValidateTeacherId(teacherId);
         Name = name;
         Description = description;
         TeacherId = new TeacherId(teacherId);
     }
 
+    /// <summary>Constructor used when creating from a <see cref="CreateClassroomCommand" />.</summary>
     public Classroom(CreateClassroomCommand command)
-    {
-        Name = command.Name;
-        Description = command.Description;
-        TeacherId = new TeacherId(command.TeacherId);
-    }
-
-    public Classroom(UpdateClassroomCommand command)
-    {
-        Name = command.Name;
-        Description = command.Description;
-        TeacherId = new TeacherId(command.TeacherId);
-    }
+        : this(command.Name, command.Description, command.TeacherId) { }
 
     [Key] public int Id { get; private set; }
 
@@ -61,21 +42,42 @@ public class Classroom
 
     public ICollection<Resource> Resources { get; private set; } = new List<Resource>();
 
-    public void UpdateName(string name)
+    /// <summary>
+    ///     Updates all mutable fields of the classroom. The caller is responsible for
+    ///     verifying that <paramref name="teacherId" /> resolves to a valid teacher BEFORE
+    ///     calling this method.
+    /// </summary>
+    public void Update(string name, string description, int teacherId)
     {
-        if (!string.IsNullOrEmpty(name))
-            Name = name;
+        ValidateName(name);
+        ValidateDescription(description);
+        ValidateTeacherId(teacherId);
+        Name = name;
+        Description = description;
+        TeacherId = new TeacherId(teacherId);
     }
 
-    public void UpdateDescription(string description)
+    // ── private invariant guards ──────────────────────────────────────────────
+
+    private static void ValidateName(string name)
     {
-        if (!string.IsNullOrEmpty(description))
-            Description = description;
+        if (string.IsNullOrWhiteSpace(name))
+            throw new InvalidClassroomDataException("Classroom name cannot be empty.");
+        if (name.Length > 100)
+            throw new InvalidClassroomDataException("Classroom name cannot exceed 100 characters.");
     }
 
-    public void UpdateTeacherId(int? teacherId, Func<int, bool> verifyProfile)
+    private static void ValidateDescription(string description)
     {
-        if (teacherId.HasValue && verifyProfile(teacherId.Value))
-            TeacherId = new TeacherId(teacherId.Value);
+        if (string.IsNullOrWhiteSpace(description))
+            throw new InvalidClassroomDataException("Classroom description cannot be empty.");
+        if (description.Length > 500)
+            throw new InvalidClassroomDataException("Classroom description cannot exceed 500 characters.");
+    }
+
+    private static void ValidateTeacherId(int teacherId)
+    {
+        if (teacherId <= 0)
+            throw new InvalidClassroomDataException("TeacherId must be a positive integer.");
     }
 }

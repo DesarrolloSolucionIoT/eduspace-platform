@@ -5,5 +5,4 @@ namespace FULLSTACKFURY.EduSpace.API.IAM.Application.Internal.OutboundServices;
 public interface ITokenService
 {
     string GenerateToken(Account account);
-    Task<int?> ValidateToken(string token);
 }

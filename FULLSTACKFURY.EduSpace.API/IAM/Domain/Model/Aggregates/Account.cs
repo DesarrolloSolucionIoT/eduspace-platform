@@ -12,7 +12,8 @@ public class Account
         Role = Enum.Parse<ERoles>(role);
     }
 
-    public Account()
+    // Parameterless ctor for EF Core
+    private Account()
     {
         Username = string.Empty;
         PasswordHash = string.Empty;
@@ -21,18 +22,16 @@ public class Account
     public int Id { get; }
     public string Username { get; private set; }
     [JsonIgnore] public string PasswordHash { get; private set; }
-    public ERoles Role { get; }
+    public ERoles Role { get; private set; }
 
-    public Account UpdateUsername(string username)
+    public void UpdateUsername(string username)
     {
         Username = username;
-        return this;
     }
 
-    public Account UpdatePasswordHash(string passwordHash)
+    public void UpdatePasswordHash(string passwordHash)
     {
         PasswordHash = passwordHash;
-        return this;
     }
 
     public string GetRole()

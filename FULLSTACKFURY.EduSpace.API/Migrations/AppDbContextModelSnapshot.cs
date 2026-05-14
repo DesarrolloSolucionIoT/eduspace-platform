@@ -46,11 +46,14 @@ namespace FULLSTACKFURY.EduSpace.API.Migrations
 
                     b.Property<string>("Status")
                         .IsRequired()
-                        .HasColumnType("longtext")
+                        .HasColumnType("varchar(255)")
                         .HasColumnName("status");
 
                     b.HasKey("Id")
                         .HasName("p_k_reports");
+
+                    b.HasIndex("Status")
+                        .HasDatabaseName("i_x_reports_status");
 
                     b.ToTable("reports");
                 });
@@ -82,6 +85,51 @@ namespace FULLSTACKFURY.EduSpace.API.Migrations
                     b.ToTable("accounts");
                 });
 
+            modelBuilder.Entity("FULLSTACKFURY.EduSpace.API.IAM.Domain.Model.Aggregates.RefreshToken", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("id");
+
+                    b.Property<int>("AccountId")
+                        .HasColumnType("int")
+                        .HasColumnName("account_id");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("expires_at");
+
+                    b.Property<int?>("ReplacedByTokenId")
+                        .HasColumnType("int")
+                        .HasColumnName("replaced_by_token_id");
+
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("datetime(6)")
+                        .HasColumnName("revoked_at");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("varchar(128)")
+                        .HasColumnName("token_hash");
+
+                    b.HasKey("Id")
+                        .HasName("p_k_refresh_tokens");
+
+                    b.HasIndex("AccountId")
+                        .HasDatabaseName("i_x_refresh_tokens_account_id");
+
+                    b.HasIndex("ExpiresAt")
+                        .HasDatabaseName("i_x_refresh_tokens_expires_at");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique()
+                        .HasDatabaseName("i_x_refresh_tokens_token_hash");
+
+                    b.ToTable("refresh_tokens");
+                });
+
             modelBuilder.Entity("FULLSTACKFURY.EduSpace.API.IAM.Domain.Model.Aggregates.VerificationCode", b =>
                 {
                     b.Property<int>("Id")
@@ -95,7 +143,8 @@ namespace FULLSTACKFURY.EduSpace.API.Migrations
 
                     b.Property<string>("Code")
                         .IsRequired()
-                        .HasColumnType("longtext")
+                        .HasMaxLength(10)
+                        .HasColumnType("varchar(10)")
                         .HasColumnName("code");
 
                     b.Property<DateTime>("ExpirationDate")
@@ -236,8 +285,8 @@ namespace FULLSTACKFURY.EduSpace.API.Migrations
                     b.HasKey("MeetingId", "TeacherId")
                         .HasName("p_k_meeting_sessions");
 
-                    b.HasIndex("TeacherId")
-                        .HasDatabaseName("i_x_meeting_sessions_teacher_id");
+                    b.HasIndex("TeacherId", "MeetingId")
+                        .HasDatabaseName("i_x_meeting_sessions_teacher_id_meeting_id");
 
                     b.ToTable("meeting_sessions");
                 });
@@ -256,11 +305,15 @@ namespace FULLSTACKFURY.EduSpace.API.Migrations
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("longtext")
+                        .HasColumnType("varchar(255)")
                         .HasColumnName("name");
 
                     b.HasKey("Id")
                         .HasName("p_k_classrooms");
+
+                    b.HasIndex("Name")
+                        .IsUnique()
+                        .HasDatabaseName("i_x_classrooms_name");
 
                     b.ToTable("classrooms");
                 });
@@ -283,14 +336,15 @@ namespace FULLSTACKFURY.EduSpace.API.Migrations
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("longtext")
+                        .HasColumnType("varchar(255)")
                         .HasColumnName("name");
 
                     b.HasKey("Id")
                         .HasName("p_k_resources");
 
-                    b.HasIndex("ClassroomId")
-                        .HasDatabaseName("i_x_resources_classroom_id");
+                    b.HasIndex("ClassroomId", "Name")
+                        .IsUnique()
+                        .HasDatabaseName("i_x_resources_classroom_id_name");
 
                     b.ToTable("resources");
                 });
@@ -320,6 +374,16 @@ namespace FULLSTACKFURY.EduSpace.API.Migrations
                         .HasName("p_k_shared_areas");
 
                     b.ToTable("shared_areas");
+                });
+
+            modelBuilder.Entity("FULLSTACKFURY.EduSpace.API.IAM.Domain.Model.Aggregates.RefreshToken", b =>
+                {
+                    b.HasOne("FULLSTACKFURY.EduSpace.API.IAM.Domain.Model.Aggregates.Account", null)
+                        .WithMany()
+                        .HasForeignKey("AccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("f_k_refresh_tokens_accounts_account_id");
                 });
 
             modelBuilder.Entity("FULLSTACKFURY.EduSpace.API.IAM.Domain.Model.Aggregates.VerificationCode", b =>
@@ -552,16 +616,7 @@ namespace FULLSTACKFURY.EduSpace.API.Migrations
                         .IsRequired()
                         .HasConstraintName("f_k_meeting_sessions_meetings_meeting_id");
 
-                    b.HasOne("FULLSTACKFURY.EduSpace.API.Profiles.Domain.Model.Aggregates.TeacherProfile", "Teacher")
-                        .WithMany()
-                        .HasForeignKey("TeacherId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("f_k_meeting_sessions_teacher_profiles_teacher_id");
-
                     b.Navigation("Meeting");
-
-                    b.Navigation("Teacher");
                 });
 
             modelBuilder.Entity("FULLSTACKFURY.EduSpace.API.SpacesAndResourceManagement.Domain.Model.Aggregates.Classroom", b =>

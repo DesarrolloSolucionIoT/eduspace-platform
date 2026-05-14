@@ -6,6 +6,8 @@ public record AuthenticatedAccountResource(
     string Username,
     string Role,
     string Token,
+    string RefreshToken,
+    int AccessTokenExpiresIn,
     ProfileData? Profile,
     IEnumerable<ClassroomData>? Classrooms,
     IEnumerable<MeetingData>? Meetings

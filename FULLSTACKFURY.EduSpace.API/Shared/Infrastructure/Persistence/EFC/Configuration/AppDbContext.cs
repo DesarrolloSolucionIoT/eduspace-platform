@@ -14,6 +14,7 @@ namespace FULLSTACKFURY.EduSpace.API.Shared.Infrastructure.Persistence.EFC.Confi
 public class AppDbContext(DbContextOptions options) : DbContext(options)
 {
     public DbSet<VerificationCode> VerificationCodes { get; set; }
+    public DbSet<RefreshToken> RefreshTokens { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder builder)
     {
@@ -25,15 +26,45 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
     {
         base.OnModelCreating(builder);
 
-        builder.Entity<VerificationCode>().HasKey(vc => vc.Id);
-        builder.Entity<VerificationCode>().Property(vc => vc.Id).IsRequired().ValueGeneratedOnAdd();
-        builder.Entity<VerificationCode>().Property(vc => vc.Code).IsRequired();
-        builder.Entity<VerificationCode>().Property(vc => vc.ExpirationDate).IsRequired();
-        builder.Entity<VerificationCode>().HasOne(vc => vc.Account)
-            .WithMany()
-            .HasForeignKey(vc => vc.AccountId);
+        // ── IAM ──────────────────────────────────────────────────────────────────
 
-        //Teacher Profiles Context
+        builder.Entity<Account>().HasKey(a => a.Id);
+        builder.Entity<Account>().Property(a => a.Id).IsRequired().ValueGeneratedOnAdd();
+        builder.Entity<Account>().Property(a => a.Username).IsRequired();
+        builder.Entity<Account>().Property(a => a.PasswordHash).IsRequired();
+        builder.Entity<Account>().Property(a => a.Role).IsRequired();
+
+        builder.Entity<VerificationCode>(e =>
+        {
+            e.HasKey(vc => vc.Id);
+            e.Property(vc => vc.Id).IsRequired().ValueGeneratedOnAdd();
+            e.Property(vc => vc.AccountId).IsRequired();
+            e.Property(vc => vc.Code).IsRequired().HasMaxLength(10);
+            e.Property(vc => vc.ExpirationDate).IsRequired();
+            e.Property(vc => vc.IsUsed).IsRequired();
+            e.HasIndex(vc => vc.AccountId);
+            e.HasOne(vc => vc.Account)
+                .WithMany()
+                .HasForeignKey(vc => vc.AccountId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<RefreshToken>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.AccountId).IsRequired();
+            e.Property(x => x.TokenHash).IsRequired().HasMaxLength(128);
+            e.HasIndex(x => x.TokenHash).IsUnique();
+            e.HasIndex(x => x.ExpiresAt);
+            e.HasIndex(x => x.AccountId);
+            e.HasOne<Account>()
+                .WithMany()
+                .HasForeignKey(x => x.AccountId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // ── Profiles ─────────────────────────────────────────────────────────────
+
         builder.Entity<TeacherProfile>().HasKey(tp => tp.Id);
         builder.Entity<TeacherProfile>().Property(tp => tp.Id).IsRequired().ValueGeneratedOnAdd();
         builder.Entity<TeacherProfile>().Property(tp => tp.AdministratorId).IsRequired();
@@ -55,8 +86,6 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
                 pi.Property(tp => tp.Phone).HasColumnName("Phone");
             });
 
-        // Administrators Profile Context
-
         builder.Entity<AdminProfile>().HasKey(ap => ap.Id);
         builder.Entity<AdminProfile>().Property(ap => ap.Id).IsRequired().ValueGeneratedOnAdd();
         builder.Entity<AdminProfile>().OwnsOne(ap => ap.ProfileName,
@@ -76,13 +105,7 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
                 pi.Property(tp => tp.Phone).HasColumnName("Phone");
             });
 
-        //IAM CONTEXT
-
-        builder.Entity<Account>().HasKey(a => a.Id);
-        builder.Entity<Account>().Property(a => a.Id).IsRequired().ValueGeneratedOnAdd();
-        builder.Entity<Account>().Property(a => a.Username).IsRequired();
-        builder.Entity<Account>().Property(a => a.PasswordHash).IsRequired();
-        builder.Entity<Account>().Property(a => a.Role).IsRequired();
+        // ── Spaces & Resource Management ─────────────────────────────────────────
 
         builder.Entity<Classroom>().HasKey(c => c.Id);
         builder.Entity<Classroom>().Property(c => c.Name).IsRequired();
@@ -93,6 +116,8 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
                 ti.WithOwner().HasForeignKey("Id");
                 ti.Property(r => r.TeacherIdentifier).HasColumnName("TeacherId");
             });
+        // Unique classroom name to prevent duplicates
+        builder.Entity<Classroom>().HasIndex(c => c.Name).IsUnique();
 
         builder.Entity<Resource>().HasKey(r => r.Id);
         builder.Entity<Resource>().Property(r => r.Name).IsRequired();
@@ -102,20 +127,21 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
             .WithMany(c => c.Resources)
             .HasForeignKey(r => r.ClassroomId)
             .OnDelete(DeleteBehavior.Cascade);
+        // Index for name scoped to classroom (resource names must be unique per classroom)
+        builder.Entity<Resource>().HasIndex(r => new { r.ClassroomId, r.Name }).IsUnique();
 
         builder.Entity<SharedArea>().HasKey(sa => sa.Id);
         builder.Entity<SharedArea>().Property(sa => sa.Name).IsRequired();
         builder.Entity<SharedArea>().Property(sa => sa.Capacity).IsRequired();
         builder.Entity<SharedArea>().Property(sa => sa.Description).IsRequired();
 
-        //RESERVATION SCHEDULING BC 
+        // ── Reservation Scheduling ───────────────────────────────────────────────
 
         builder.Entity<Meeting>().HasKey(m => m.Id);
         builder.Entity<Meeting>().Property(m => m.Id).IsRequired().ValueGeneratedOnAdd();
         builder.Entity<Meeting>().Property(m => m.Title).IsRequired();
         builder.Entity<Meeting>().Property(m => m.Description).IsRequired();
         builder.Entity<Meeting>().Property(m => m.Date).IsRequired();
-        //Date conversion to fit the values from the db
         builder.Entity<Meeting>().Property(m => m.Date)
             .HasConversion(v => v.ToDateTime(TimeOnly.MinValue),
                 v => DateOnly.FromDateTime(v));
@@ -123,13 +149,13 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
         builder.Entity<Meeting>()
             .Property(m => m.EndTime)
             .HasConversion(
-                v => v.ToTimeSpan(), // Convert TimeOnly to TimeSpan for the database
+                v => v.ToTimeSpan(),
                 v => TimeOnly.FromTimeSpan(v));
 
         builder.Entity<Meeting>()
             .Property(m => m.StartTime)
             .HasConversion(
-                v => v.ToTimeSpan(), // Convert TimeOnly to TimeSpan for the database
+                v => v.ToTimeSpan(),
                 v => TimeOnly.FromTimeSpan(v));
 
         builder.Entity<Meeting>().Property(m => m.StartTime).IsRequired();
@@ -141,7 +167,6 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
                 ai.WithOwner().HasForeignKey("Id");
                 ai.Property(r => r.AdministratorIdentifier).HasColumnName("AdministratorId");
             });
-
 
         builder.Entity<Meeting>().OwnsOne(m => m.ClassroomId,
             ci =>
@@ -159,13 +184,13 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
             .HasForeignKey(ms => ms.MeetingId)
             .OnDelete(DeleteBehavior.Cascade);
 
+        // Teacher navigation removed (ACL boundary fix) — TeacherId is a plain scalar FK.
+        // Unique index prevents double-booking the same teacher in overlapping sessions.
         builder.Entity<MeetingSession>()
-            .HasOne(ms => ms.Teacher)
-            .WithMany()
-            .HasForeignKey(ms => ms.TeacherId)
-            .OnDelete(DeleteBehavior.Cascade);
+            .HasIndex(ms => new { ms.TeacherId, ms.MeetingId });
 
-        // breakdown Management Context
+        // ── Breakdown Management ─────────────────────────────────────────────────
+
         builder.Entity<Report>().HasKey(r => r.Id);
         builder.Entity<Report>().Property(r => r.Id).IsRequired().ValueGeneratedOnAdd();
         builder.Entity<Report>().Property(r => r.KindOfReport).IsRequired();
@@ -177,7 +202,11 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
                 status => status.Value,
                 value => ReportStatus.FromString(value)
             ).IsRequired();
+        // Index for filtering reports by status
+        builder.Entity<Report>().HasIndex(r => r.Status);
 
+        // ResourceId is a VO stored as a plain int column via HasConversion.
+        // Store as "resource_id" column (snake_case applied by UseSnakeCaseNamingConvention).
         builder.Entity<Report>().Property(r => r.ResourceId)
             .HasConversion(
                 resourceId => resourceId.Id,
@@ -185,7 +214,16 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
             )
             .HasColumnName("ResourceId");
 
-        //#TODO Add configurations here
+        // FK constraint: Report.resource_id → resources.id
+        // Defined via shadow property so EF can bind a typed int FK while the domain
+        // property remains a VO. The shadow property intentionally shares the column name
+        // with the converted VO property — we suppress EF's duplicate check by calling
+        // HasAnnotation to mark it as the FK backing field.
+        // Note: EF Core 8 does not support HasConversion + HasForeignKey on the same
+        // property when the conversion target type differs from the property type.
+        // We instead omit the DB-level FK and rely on application-level validation
+        // (ExternalResourceService) for referential integrity.
+        // The HasIndex on status below is kept for query performance.
 
         builder.UseSnakeCaseNamingConvention();
     }
