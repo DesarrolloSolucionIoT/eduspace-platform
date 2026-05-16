@@ -196,11 +196,13 @@ builder.Services.Configure<TokenSettings>(builder.Configuration.GetSection("Toke
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IHashingService, HashingService>();
 
-// Register EmailService based on environment
-if (builder.Environment.IsDevelopment())
-    builder.Services.AddScoped<IEmailService, MockEmailService>();
-else
+// Register EmailService based on configuration:
+// real Resend when RESEND_API_KEY is set, mock otherwise.
+builder.Services.AddHttpClient();
+if (!string.IsNullOrWhiteSpace(builder.Configuration["RESEND_API_KEY"]))
     builder.Services.AddScoped<IEmailService, EmailService>();
+else
+    builder.Services.AddScoped<IEmailService, MockEmailService>();
 
 // JWT authentication — validates tokens issued by TokenService
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

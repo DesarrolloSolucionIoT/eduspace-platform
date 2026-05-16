@@ -1,6 +1,6 @@
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
 using FULLSTACKFURY.EduSpace.API.IAM.Application.Internal.OutboundServices;
-using SendGrid;
-using SendGrid.Helpers.Mail;
 
 namespace FULLSTACKFURY.EduSpace.API.IAM.Infrastructure.Services;
 
@@ -8,55 +8,44 @@ public class EmailService : IEmailService
 {
     private readonly IConfiguration _configuration;
     private readonly ILogger<EmailService> _logger;
+    private readonly HttpClient _http;
 
-    public EmailService(IConfiguration configuration, ILogger<EmailService> logger)
+    public EmailService(IConfiguration configuration, ILogger<EmailService> logger, IHttpClientFactory httpClientFactory)
     {
         _configuration = configuration;
         _logger = logger;
+        _http = httpClientFactory.CreateClient("Resend");
+        _http.BaseAddress ??= new Uri("https://api.resend.com/");
     }
 
     public async Task SendEmailAsync(string to, string subject, string body)
     {
-        try
+        var apiKey = _configuration["RESEND_API_KEY"]
+                     ?? throw new InvalidOperationException("RESEND_API_KEY not configured");
+        var fromEmail = _configuration["RESEND_FROM"] ?? "onboarding@resend.dev";
+        var fromName = _configuration["RESEND_FROM_NAME"] ?? "EduSpace Platform";
+
+        var payload = new
         {
-            // 1. Lee la API Key desde las variables de Railway
-            var apiKey = _configuration["SENDGRID_API_KEY"] ??
-                         throw new InvalidOperationException("SENDGRID_API_KEY not configured");
-            var client = new SendGridClient(apiKey);
+            from = $"{fromName} <{fromEmail}>",
+            to = new[] { to },
+            subject,
+            html = $"<h3>Tu código es: {body}</h3>",
+            text = $"Tu código es: {body}"
+        };
 
-            // 2. Lee el email verificado (el "de") desde las variables de Railway
-            var fromEmail = _configuration["SMTP_USER"] ??
-                            throw new InvalidOperationException("SMTP_USER (verified sender email) not configured");
-            var fromName = _configuration["SENDGRID_FROM_NAME"] ?? "Plataforma EduSpace";
+        using var request = new HttpRequestMessage(HttpMethod.Post, "emails") { Content = JsonContent.Create(payload) };
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
 
-            // 3. Crea el mensaje usando SendGrid
-            var msg = new SendGridMessage
-            {
-                From = new EmailAddress(fromEmail, fromName),
-                Subject = subject,
-                PlainTextContent = $"Tu código es: {body}",
-                HtmlContent = $"<h3>Tu código es: {body}</h3>"
-            };
-            msg.AddTo(new EmailAddress(to));
+        var response = await _http.SendAsync(request);
 
-            // 4. Envía el email usando la API de SendGrid (HTTPS)
-            var response = await client.SendEmailAsync(msg);
-
-            if (response.IsSuccessStatusCode)
-            {
-                _logger.LogInformation("Email enviado a {To} via SendGrid API", to);
-            }
-            else
-            {
-                _logger.LogError("Fallo al enviar email via SendGrid API: {StatusCode} - {Body}", response.StatusCode,
-                    await response.Body.ReadAsStringAsync());
-                throw new InvalidOperationException($"Failed to send email via SendGrid: {response.StatusCode}");
-            }
-        }
-        catch (Exception ex)
+        if (!response.IsSuccessStatusCode)
         {
-            _logger.LogError(ex, "Error enviando email con SendGrid API.");
-            throw;
+            var error = await response.Content.ReadAsStringAsync();
+            _logger.LogError("Resend send failed: {Status} {Body}", response.StatusCode, error);
+            throw new InvalidOperationException($"Resend failed: {response.StatusCode}");
         }
+
+        _logger.LogInformation("Email enviado a {To} via Resend", to);
     }
 }
