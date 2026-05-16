@@ -53,7 +53,7 @@ The platform manages everything from user authentication to space reservations, 
 - **BCrypt password hashing** for maximum security
 - **Role-based authorization** (Administrator, Teacher)
 - Strict JWT validation: `ValidateIssuer`, `ValidateAudience`, `ValidateIssuerSigningKey` all enabled
-- Email verification with SendGrid / SMTP integration
+- Email verification via [Resend](https://resend.com) HTTP API (falls back to a mock service that logs codes to stdout when `RESEND_API_KEY` is not set)
 
 ### 👥 Profile Management
 - **Teacher profiles** with comprehensive information
@@ -144,8 +144,7 @@ Each context is independently developed with its own domain model:
 - **Microsoft.IdentityModel.Tokens** - Token validation
 
 ### Email & Communication
-- **SendGrid** - Email delivery service
-- **MailKit** - Email client library
+- **Resend** - Email delivery service (called via `HttpClient`, no SDK dependency)
 
 ### Documentation & Tools
 - **Swagger/OpenAPI** - Interactive API documentation
@@ -206,15 +205,10 @@ MYSQL_PORT=3308
 
 ConnectionStrings__DefaultConnection=server=localhost;port=3308;user=eduspace;password=your_mysql_password;database=eduspacedb;AllowPublicKeyRetrieval=true;SslMode=none
 
-# Email (SendGrid or Gmail)
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=your_email@gmail.com
-SMTP_PASSWORD=your_app_password
-
-SENDGRID_API_KEY=your_sendgrid_api_key_here
-SENDGRID_FROM_EMAIL=noreply@yourdomain.com
-SENDGRID_FROM_NAME=EduSpace Platform
+# Email — Resend (leave RESEND_API_KEY empty to fall back to MockEmailService that logs codes to stdout)
+RESEND_API_KEY=
+RESEND_FROM=onboarding@resend.dev
+RESEND_FROM_NAME=EduSpace Platform
 
 # CORS
 CORS_ALLOWED_ORIGINS=http://localhost:5173,http://localhost:3000,http://localhost:4200
@@ -536,29 +530,18 @@ JWT settings live under `TokenSettings` in `appsettings.json`:
 
 ### Email Configuration
 
-For 2FA email verification, configure email settings in your `.env` file.
+For 2FA email verification, the backend uses [Resend](https://resend.com) via its HTTP API. The DI registration in `Program.cs` swaps the implementation based on whether `RESEND_API_KEY` is configured:
 
-**Option 1: Gmail with App Password**
-
-```env
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=your_email@gmail.com
-SMTP_PASSWORD=your_16_digit_app_password
-```
-
-**Option 2: SendGrid**
+- `RESEND_API_KEY` set → real `EmailService` (sends via Resend)
+- `RESEND_API_KEY` empty or absent → `MockEmailService` (logs the 6-digit code to stdout — handy for local development without burning emails)
 
 ```env
-SMTP_HOST=smtp.sendgrid.net
-SMTP_PORT=587
-SMTP_USER=apikey
-SMTP_PASSWORD=your_sendgrid_api_key
-
-SENDGRID_API_KEY=your_sendgrid_api_key_here
-SENDGRID_FROM_EMAIL=noreply@yourdomain.com
-SENDGRID_FROM_NAME=EduSpace Platform
+RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxxx
+RESEND_FROM=onboarding@resend.dev      # use the Resend sandbox sender, or a verified address from your domain
+RESEND_FROM_NAME=EduSpace Platform
 ```
+
+**Free-tier limitation:** without a verified domain in Resend, emails can only be delivered to the address registered on the Resend account. Add and verify your own domain (Settings → Domains) to send to arbitrary recipients.
 
 ### CORS Configuration
 
@@ -679,12 +662,16 @@ docker-compose -f docker-compose.prod.yml up -d
 
 ### Cloud Deployment
 
-The application is compatible with:
-- **Azure App Service**
+**Current academic deployment** (Brazil South):
+- API: https://app-eduspace-7b4076.azurewebsites.net (Azure App Service F1 Linux)
+- Swagger: https://app-eduspace-7b4076.azurewebsites.net/swagger/index.html
+- Database: Aiven MySQL Flexible Server (free trial — expires ~2026-06-15)
+- Re-deploy from a local checkout: `./deploy.sh` (runs `dotnet publish`, zips, and pushes via `az webapp deploy`)
+
+The application is also compatible with:
 - **AWS Elastic Beanstalk**
 - **Google Cloud Run**
-- **Railway** (currently configured)
-- **Heroku**
+- **Heroku** / **Railway**
 - Any **Kubernetes cluster**
 
 ### Environment Variables for Production
@@ -701,15 +688,10 @@ MYSQL_PORT=3306
 
 ConnectionStrings__DefaultConnection=server=your-db-host;port=3306;user=eduspace;password=your_production_password;database=eduspacedb;AllowPublicKeyRetrieval=true;SslMode=Required
 
-# Email
-SMTP_HOST=smtp.sendgrid.net
-SMTP_PORT=587
-SMTP_USER=apikey
-SMTP_PASSWORD=your_sendgrid_api_key
-
-SENDGRID_API_KEY=your_sendgrid_api_key_here
-SENDGRID_FROM_EMAIL=noreply@yourdomain.com
-SENDGRID_FROM_NAME=EduSpace Platform
+# Email — Resend
+RESEND_API_KEY=re_your_production_key
+RESEND_FROM=noreply@yourdomain.com         # must be a verified sender on a verified domain
+RESEND_FROM_NAME=EduSpace Platform
 
 # CORS
 CORS_ALLOWED_ORIGINS=https://yourdomain.com,https://www.yourdomain.com
