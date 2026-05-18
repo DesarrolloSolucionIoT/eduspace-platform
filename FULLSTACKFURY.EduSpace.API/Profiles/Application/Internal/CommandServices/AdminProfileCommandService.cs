@@ -19,7 +19,7 @@ public class AdminProfileCommandService(
     {
         try
         {
-            var accountId = await externalIamService.CreateAccount(command.Email, command.Password, ProfileRoles.Admin);
+            var accountId = await externalIamService.CreateAccount(command.Username, command.Password, ProfileRoles.Admin);
             var adminProfile = new AdminProfile(command, accountId);
 
             await adminProfileRepository.AddAsync(adminProfile);
