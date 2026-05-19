@@ -21,6 +21,24 @@ public class AdminProfileRepository(AppDbContext context)
             .FirstOrDefaultAsync(ap => ap.AccountId.Id == accountId);
     }
 
+    public async Task<int?> FindAccountIdByEmailAsync(string email)
+    {
+        return await Context.Set<AdminProfile>()
+            .AsNoTracking()
+            .Where(ap => ap.ProfilePrivateInformation.Email == email)
+            .Select(ap => (int?)ap.AccountId.Id)
+            .FirstOrDefaultAsync();
+    }
+
+    public async Task<int?> FindLinkedAccountIdAsync(int profileId)
+    {
+        return await Context.Set<AdminProfile>()
+            .AsNoTracking()
+            .Where(ap => ap.Id == profileId)
+            .Select(ap => (int?)ap.AccountId.Id)
+            .FirstOrDefaultAsync();
+    }
+
     public override async Task<IEnumerable<AdminProfile>> ListAsync()
     {
         return await Context.Set<AdminProfile>()

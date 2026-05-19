@@ -21,6 +21,24 @@ public class TeacherProfileRepository(AppDbContext context)
             .FirstOrDefaultAsync(tp => tp.AccountId.Id == accountId);
     }
 
+    public async Task<int?> FindAccountIdByEmailAsync(string email)
+    {
+        return await Context.Set<TeacherProfile>()
+            .AsNoTracking()
+            .Where(tp => tp.ProfilePrivateInformation.Email == email)
+            .Select(tp => (int?)tp.AccountId.Id)
+            .FirstOrDefaultAsync();
+    }
+
+    public async Task<int?> FindLinkedAccountIdAsync(int profileId)
+    {
+        return await Context.Set<TeacherProfile>()
+            .AsNoTracking()
+            .Where(tp => tp.Id == profileId)
+            .Select(tp => (int?)tp.AccountId.Id)
+            .FirstOrDefaultAsync();
+    }
+
     public override async Task<IEnumerable<TeacherProfile>> ListAsync()
     {
         return await Context.Set<TeacherProfile>()

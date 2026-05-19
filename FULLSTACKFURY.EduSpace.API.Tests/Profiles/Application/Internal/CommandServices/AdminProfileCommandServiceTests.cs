@@ -301,17 +301,38 @@ public class AdminProfileCommandServiceTests
     [Fact]
     public async Task Handle_DeleteAdmin_WhenProfileExists_ShouldDeleteLinkedIamAccount()
     {
-        // Arrange — profile carries AccountId(2) per ProfileTestBuilder.ValidAdminProfile
+        // Arrange — production resolves linkedAccountId via projection, not via
+        // the loaded entity's AccountId navigation (which EF leaves null).
+        const int linkedAccountId = 42;
         var existing = ProfileTestBuilder.ValidAdminProfile();
         var command = new DeleteAdminProfileCommand(1);
         _repo.FindByIdAsync(1).Returns(
             Task.FromResult<FULLSTACKFURY.EduSpace.API.Profiles.Domain.Model.Aggregates.AdminProfile?>(existing));
+        _repo.FindLinkedAccountIdAsync(1).Returns(Task.FromResult<int?>(linkedAccountId));
 
         // Act
         await _sut.Handle(command);
 
         // Assert
-        await _iamService.Received(1).DeleteAccountAsync(existing.AccountId.Id);
+        await _iamService.Received(1).DeleteAccountAsync(linkedAccountId);
+    }
+
+    [Fact]
+    public async Task Handle_DeleteAdmin_WhenNoLinkedAccount_ShouldRemoveProfileAndSkipIamCleanup()
+    {
+        // Arrange — orphan profile with no linked IAM account row.
+        var existing = ProfileTestBuilder.ValidAdminProfile();
+        var command = new DeleteAdminProfileCommand(1);
+        _repo.FindByIdAsync(1).Returns(
+            Task.FromResult<FULLSTACKFURY.EduSpace.API.Profiles.Domain.Model.Aggregates.AdminProfile?>(existing));
+        _repo.FindLinkedAccountIdAsync(1).Returns(Task.FromResult<int?>(null));
+
+        // Act
+        await _sut.Handle(command);
+
+        // Assert
+        _repo.Received(1).Remove(existing);
+        await _iamService.DidNotReceive().DeleteAccountAsync(Arg.Any<int>());
     }
 
     [Fact]
@@ -323,6 +344,7 @@ public class AdminProfileCommandServiceTests
         var command = new DeleteAdminProfileCommand(1);
         _repo.FindByIdAsync(1).Returns(
             Task.FromResult<FULLSTACKFURY.EduSpace.API.Profiles.Domain.Model.Aggregates.AdminProfile?>(existing));
+        _repo.FindLinkedAccountIdAsync(1).Returns(Task.FromResult<int?>(42));
         _iamService.DeleteAccountAsync(Arg.Any<int>())
             .Returns(Task.FromException(new Exception("IAM unreachable")));
 
