@@ -13,8 +13,8 @@ namespace FULLSTACKFURY.EduSpace.API.Shared.Infrastructure.Persistence.EFC.Confi
 
 public class AppDbContext(DbContextOptions options) : DbContext(options)
 {
-    public DbSet<VerificationCode> VerificationCodes { get; set; }
     public DbSet<RefreshToken> RefreshTokens { get; set; }
+    public DbSet<ActivationToken> ActivationTokens { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder builder)
     {
@@ -33,21 +33,7 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
         builder.Entity<Account>().Property(a => a.Username).IsRequired();
         builder.Entity<Account>().Property(a => a.PasswordHash).IsRequired();
         builder.Entity<Account>().Property(a => a.Role).IsRequired();
-
-        builder.Entity<VerificationCode>(e =>
-        {
-            e.HasKey(vc => vc.Id);
-            e.Property(vc => vc.Id).IsRequired().ValueGeneratedOnAdd();
-            e.Property(vc => vc.AccountId).IsRequired();
-            e.Property(vc => vc.Code).IsRequired().HasMaxLength(10);
-            e.Property(vc => vc.ExpirationDate).IsRequired();
-            e.Property(vc => vc.IsUsed).IsRequired();
-            e.HasIndex(vc => vc.AccountId);
-            e.HasOne(vc => vc.Account)
-                .WithMany()
-                .HasForeignKey(vc => vc.AccountId)
-                .OnDelete(DeleteBehavior.Cascade);
-        });
+        builder.Entity<Account>().Property(a => a.IsActive).IsRequired().HasDefaultValue(false);
 
         builder.Entity<RefreshToken>(e =>
         {
@@ -61,6 +47,20 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
                 .WithMany()
                 .HasForeignKey(x => x.AccountId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        builder.Entity<ActivationToken>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.AccountId).IsRequired();
+            e.Property(x => x.TokenHash).IsRequired().HasMaxLength(64);
+            e.HasIndex(x => x.TokenHash).IsUnique();
+            e.Property(x => x.ExpiresAt).IsRequired();
+            e.Property(x => x.UsedAt).IsRequired(false);
+            e.HasOne<Account>()
+                .WithMany()
+                .HasForeignKey(x => x.AccountId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         // ── Profiles ─────────────────────────────────────────────────────────────

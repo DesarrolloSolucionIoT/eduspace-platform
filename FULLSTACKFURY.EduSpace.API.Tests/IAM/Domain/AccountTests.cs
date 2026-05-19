@@ -105,4 +105,69 @@ public class AccountTests
         // Assert
         result.Should().Be(expected);
     }
+
+    // ─── IsActive ────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void Constructor_WhenCalled_IsActiveDefaultsFalse()
+    {
+        // Arrange / Act
+        var account = new Account("user@example.com", "hash", "RoleAdmin");
+
+        // Assert
+        account.IsActive.Should().BeFalse();
+    }
+
+    [Fact]
+    public void Constructor_WhenCalled_BuilderDefaultIsInactive()
+    {
+        // Arrange / Act
+        var account = new AccountBuilder().Build();
+
+        // Assert
+        account.IsActive.Should().BeFalse();
+    }
+
+    // ─── Activate ────────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void Activate_WhenInactive_SetsIsActiveTrue()
+    {
+        // Arrange
+        var account = new AccountBuilder().Build();
+
+        // Act
+        account.Activate();
+
+        // Assert
+        account.IsActive.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Activate_WhenAlreadyActive_RemainsTrue()
+    {
+        // Arrange
+        var account = new AccountBuilder().Build();
+        account.Activate();
+
+        // Act
+        account.Activate();
+
+        // Assert
+        account.IsActive.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Activate_WhenAlreadyActive_DoesNotThrow()
+    {
+        // Arrange
+        var account = new AccountBuilder().Build();
+        account.Activate();
+
+        // Act
+        Action act = () => account.Activate();
+
+        // Assert
+        act.Should().NotThrow();
+    }
 }

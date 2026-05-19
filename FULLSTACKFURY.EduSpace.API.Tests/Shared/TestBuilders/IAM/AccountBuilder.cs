@@ -42,5 +42,21 @@ public class AccountBuilder
         return this;
     }
 
-    public Account Build() => new Account(_username, _passwordHash, _role);
+    private bool _activate = false;
+
+    /// <summary>
+    /// Calls <see cref="Account.Activate()"/> on the built instance so <see cref="Account.IsActive"/> is true.
+    /// </summary>
+    public AccountBuilder AsActive()
+    {
+        _activate = true;
+        return this;
+    }
+
+    public Account Build()
+    {
+        var account = new Account(_username, _passwordHash, _role);
+        if (_activate) account.Activate();
+        return account;
+    }
 }
