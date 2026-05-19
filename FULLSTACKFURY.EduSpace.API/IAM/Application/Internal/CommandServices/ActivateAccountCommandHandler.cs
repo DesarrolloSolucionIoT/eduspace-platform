@@ -21,7 +21,7 @@ public class ActivateAccountCommandHandler(
     {
         var hash = ActivationToken.ComputeHash(command.RawToken);
 
-        var token = await activationTokenRepository.FindActiveByHashAsync(hash);
+        var token = await activationTokenRepository.FindByHashAsync(hash);
 
         if (token is null)
         {

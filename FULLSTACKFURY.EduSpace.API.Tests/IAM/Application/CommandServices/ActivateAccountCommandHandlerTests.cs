@@ -33,7 +33,7 @@ public class ActivateAccountCommandHandlerTests
         var account = new AccountBuilder().WithUsername("admin@example.com").AsAdmin().Build();
 
         _activationTokenRepository
-            .FindActiveByHashAsync(ActivationToken.ComputeHash(rawToken))
+            .FindByHashAsync(ActivationToken.ComputeHash(rawToken))
             .Returns(tokenEntity);
         _accountRepository.FindByIdAsync(tokenEntity.AccountId).Returns(account);
 
@@ -54,7 +54,7 @@ public class ActivateAccountCommandHandlerTests
         var account = new AccountBuilder().Build();
 
         _activationTokenRepository
-            .FindActiveByHashAsync(ActivationToken.ComputeHash(rawToken))
+            .FindByHashAsync(ActivationToken.ComputeHash(rawToken))
             .Returns(tokenEntity);
         _accountRepository.FindByIdAsync(tokenEntity.AccountId).Returns(account);
 
@@ -75,7 +75,7 @@ public class ActivateAccountCommandHandlerTests
         var account = new AccountBuilder().Build();
 
         _activationTokenRepository
-            .FindActiveByHashAsync(ActivationToken.ComputeHash(rawToken))
+            .FindByHashAsync(ActivationToken.ComputeHash(rawToken))
             .Returns(tokenEntity);
         _accountRepository.FindByIdAsync(tokenEntity.AccountId).Returns(account);
 
@@ -97,7 +97,7 @@ public class ActivateAccountCommandHandlerTests
         var rawToken = "nonexistentrawtoken";
 
         _activationTokenRepository
-            .FindActiveByHashAsync(Arg.Any<string>())
+            .FindByHashAsync(Arg.Any<string>())
             .Returns((ActivationToken?)null);
 
         var sut = CreateSut();
@@ -122,7 +122,7 @@ public class ActivateAccountCommandHandlerTests
         prop!.SetValue(tokenEntity, DateTime.UtcNow.AddHours(-1));
 
         _activationTokenRepository
-            .FindActiveByHashAsync(ActivationToken.ComputeHash(rawToken))
+            .FindByHashAsync(ActivationToken.ComputeHash(rawToken))
             .Returns(tokenEntity);
 
         var sut = CreateSut();
@@ -146,7 +146,7 @@ public class ActivateAccountCommandHandlerTests
         tokenEntity.MarkAsUsed();
 
         _activationTokenRepository
-            .FindActiveByHashAsync(ActivationToken.ComputeHash(rawToken))
+            .FindByHashAsync(ActivationToken.ComputeHash(rawToken))
             .Returns(tokenEntity);
 
         var sut = CreateSut();
@@ -167,7 +167,7 @@ public class ActivateAccountCommandHandlerTests
         var (tokenEntity, rawToken) = ActivationToken.CreateNew(99, TimeSpan.FromHours(24));
 
         _activationTokenRepository
-            .FindActiveByHashAsync(ActivationToken.ComputeHash(rawToken))
+            .FindByHashAsync(ActivationToken.ComputeHash(rawToken))
             .Returns(tokenEntity);
         _accountRepository.FindByIdAsync(99).Returns((Account?)null);
 

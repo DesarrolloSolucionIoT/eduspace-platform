@@ -9,9 +9,9 @@ namespace FULLSTACKFURY.EduSpace.API.IAM.Infrastructure.Persistence.EFC.Reposito
 public class ActivationTokenRepository(AppDbContext context)
     : BaseRepository<ActivationToken>(context), IActivationTokenRepository
 {
-    public async Task<ActivationToken?> FindActiveByHashAsync(string hash)
+    public async Task<ActivationToken?> FindByHashAsync(string hash)
     {
         return await Context.Set<ActivationToken>()
-            .FirstOrDefaultAsync(at => at.TokenHash == hash && at.UsedAt == null && at.ExpiresAt > DateTime.UtcNow);
+            .FirstOrDefaultAsync(at => at.TokenHash == hash);
     }
 }
