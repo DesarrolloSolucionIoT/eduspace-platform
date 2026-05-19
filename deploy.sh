@@ -1,62 +1,60 @@
 #!/usr/bin/env bash
-# Re-deploy del backend EduSpace a Azure App Service.
-# Asume que los recursos ya están creados (rg-eduspace-academic, app-eduspace-*).
-# Si necesitas crearlos desde cero, mirá la sesión inicial de deployment en engram
-# (topic_key: azure/deployment/backend) o el README.
+# Re-deploy del backend EduSpace a Azure Container Apps.
+# Asume que los recursos ya existen (rg-eduspace-academic, ca1e77e4bf38acr,
+# eduspace-api-env, eduspace-api). Si necesitás crearlos desde cero, mirá
+# la sesión de migración en engram (topic config/backend-migrado-a-azure-container-apps).
 
 set -euo pipefail
 
 # --- Config (sobrescribir por env vars si hace falta) ---
 RG="${RG:-rg-eduspace-academic}"
-APP_NAME="${APP_NAME:-app-eduspace-7b4076}"
-PROJECT_DIR="${PROJECT_DIR:-$(dirname "$(realpath "$0")")/FULLSTACKFURY.EduSpace.API}"
-PUBLISH_DIR="$PROJECT_DIR/publish"
-ZIP_PATH="$PROJECT_DIR/publish.zip"
+APP_NAME="${APP_NAME:-eduspace-api}"
+ACR_NAME="${ACR_NAME:-ca1e77e4bf38acr}"
+IMAGE_NAME="${IMAGE_NAME:-eduspace-api}"
+IMAGE_TAG="${IMAGE_TAG:-v$(date -u +%Y%m%d%H%M%S)}"
+PROJECT_DIR="${PROJECT_DIR:-$(dirname "$(realpath "$0")")}"
+
+IMAGE_REF="${ACR_NAME}.azurecr.io/${IMAGE_NAME}:${IMAGE_TAG}"
 
 # --- Sanity ---
 command -v az >/dev/null || { echo "az CLI no encontrado"; exit 1; }
-command -v dotnet >/dev/null || { echo "dotnet no encontrado"; exit 1; }
+command -v docker >/dev/null || { echo "docker no encontrado"; exit 1; }
 az account show >/dev/null 2>&1 || { echo "No estás logueado en az. Corré: az login"; exit 1; }
-[[ -d "$PROJECT_DIR" ]] || { echo "PROJECT_DIR no existe: $PROJECT_DIR"; exit 1; }
+[[ -f "$PROJECT_DIR/Dockerfile" ]] || { echo "Dockerfile no encontrado en $PROJECT_DIR"; exit 1; }
 
 echo "▶ Resource Group : $RG"
-echo "▶ Web App        : $APP_NAME"
-echo "▶ Project dir    : $PROJECT_DIR"
+echo "▶ Container App  : $APP_NAME"
+echo "▶ Registry       : $ACR_NAME.azurecr.io"
+echo "▶ Image          : $IMAGE_REF"
 echo
 
-# --- 1. Publish ---
-echo "[1/3] dotnet publish (Release)…"
-rm -rf "$PUBLISH_DIR" "$ZIP_PATH"
-dotnet publish "$PROJECT_DIR" -c Release -o "$PUBLISH_DIR" --nologo | tail -5
+# --- 1. Login al registry ---
+echo "[1/4] az acr login…"
+az acr login -n "$ACR_NAME" >/dev/null
 
-# --- 2. Zip ---
-echo "[2/3] Empaquetando zip…"
-python3 - <<PY
-import os, zipfile
-base = "$PUBLISH_DIR"
-out  = "$ZIP_PATH"
-with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as z:
-    for root, _, files in os.walk(base):
-        for f in files:
-            p = os.path.join(root, f)
-            z.write(p, os.path.relpath(p, base))
-print(f"  → {out} ({os.path.getsize(out)/1024/1024:.1f} MB)")
-PY
+# --- 2. Build ---
+echo "[2/4] docker build…"
+docker build -t "$IMAGE_REF" "$PROJECT_DIR" | tail -5
 
-# --- 3. Deploy ---
-echo "[3/3] az webapp deploy…"
-az webapp deploy \
-  --resource-group "$RG" \
-  --name "$APP_NAME" \
-  --src-path "$ZIP_PATH" \
-  --type zip \
-  --async false \
-  --output none
+# --- 3. Push ---
+echo "[3/4] docker push…"
+docker push "$IMAGE_REF" | tail -3
 
-URL="https://${APP_NAME}.azurewebsites.net"
+# --- 4. Update Container App ---
+echo "[4/4] az containerapp update…"
+FQDN=$(az containerapp update \
+  -g "$RG" \
+  -n "$APP_NAME" \
+  --image "$IMAGE_REF" \
+  --query "properties.configuration.ingress.fqdn" \
+  -o tsv)
+
+URL="https://${FQDN}"
 echo
 echo "✓ Deploy completo."
-echo "  Swagger: $URL/swagger/index.html"
+echo "  URL: $URL"
 echo
 echo "Smoke test:"
-curl -sk -o /dev/null -w "  /swagger/index.html → HTTP %{http_code}\n" --max-time 30 "$URL/swagger/index.html"
+curl -sk -o /dev/null -w "  POST /api/v1/authentication/activate {token:''} → HTTP %{http_code}\n" \
+  --max-time 30 -X POST "$URL/api/v1/authentication/activate" \
+  -H "Content-Type: application/json" -d '{"token":""}'

@@ -663,10 +663,10 @@ docker-compose -f docker-compose.prod.yml up -d
 ### Cloud Deployment
 
 **Current academic deployment** (Brazil South):
-- API: https://app-eduspace-7b4076.azurewebsites.net (Azure App Service F1 Linux)
-- Swagger: https://app-eduspace-7b4076.azurewebsites.net/swagger/index.html
-- Database: Aiven MySQL Flexible Server (free trial — expires ~2026-06-15)
-- Re-deploy from a local checkout: `./deploy.sh` (runs `dotnet publish`, zips, and pushes via `az webapp deploy`)
+- API: https://eduspace-api.purplemushroom-1f6e5ae3.brazilsouth.azurecontainerapps.io (Azure Container Apps, consumption tier)
+- Swagger is disabled in Production
+- Database: Aiven MySQL (replacement provisioned 2026-05-19 after the original trial was decommissioned)
+- Re-deploy from a local checkout: `./deploy.sh` (docker build → ACR push → `az containerapp update`)
 
 The application is also compatible with:
 - **AWS Elastic Beanstalk**
