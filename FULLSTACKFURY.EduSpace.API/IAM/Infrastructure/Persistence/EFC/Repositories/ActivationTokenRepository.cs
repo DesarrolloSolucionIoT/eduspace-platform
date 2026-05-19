@@ -14,4 +14,13 @@ public class ActivationTokenRepository(AppDbContext context)
         return await Context.Set<ActivationToken>()
             .FirstOrDefaultAsync(at => at.TokenHash == hash);
     }
+
+    public async Task DeleteAllForAccountAsync(int accountId)
+    {
+        var tokens = await Context.Set<ActivationToken>()
+            .Where(at => at.AccountId == accountId)
+            .ToListAsync();
+
+        Context.Set<ActivationToken>().RemoveRange(tokens);
+    }
 }

@@ -12,6 +12,8 @@ public class IamContextFacade(
     IAccountCommandService accountCommandService,
     IAccountQueryService accountQueryService,
     IAccountRepository accountRepository,
+    IRefreshTokenRepository refreshTokenRepository,
+    IActivationTokenRepository activationTokenRepository,
     IUnitOfWork unitOfWork,
     ILogger<IamContextFacade> logger) : IIamContextFacade
 {
@@ -66,6 +68,11 @@ public class IamContextFacade(
             logger.LogWarning("DeleteAccountAsync: account {AccountId} not found (already gone?)", accountId);
             return;
         }
+
+        // refresh_tokens + activation_tokens hold ON DELETE RESTRICT FKs into accounts.
+        // Remove dependents in the same UoW so the account row can actually be deleted.
+        await refreshTokenRepository.DeleteAllForAccountAsync(accountId);
+        await activationTokenRepository.DeleteAllForAccountAsync(accountId);
 
         accountRepository.Remove(account);
         await unitOfWork.CompleteAsync();

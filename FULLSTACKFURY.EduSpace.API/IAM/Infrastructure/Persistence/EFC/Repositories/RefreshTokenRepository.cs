@@ -31,4 +31,13 @@ public class RefreshTokenRepository(AppDbContext context)
         foreach (var token in activeTokens)
             token.Revoke();
     }
+
+    public async Task DeleteAllForAccountAsync(int accountId)
+    {
+        var tokens = await Context.Set<RefreshToken>()
+            .Where(rt => rt.AccountId == accountId)
+            .ToListAsync();
+
+        Context.Set<RefreshToken>().RemoveRange(tokens);
+    }
 }
