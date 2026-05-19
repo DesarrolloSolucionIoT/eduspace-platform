@@ -15,4 +15,10 @@ public interface IIamContextFacade
     /// Used for admin accounts that require email verification (REQ-017, REQ-016).
     /// </summary>
     Task RequestActivationEmailAsync(int accountId, string email, string fullName);
+
+    /// <summary>
+    /// Deletes the IAM account so its username/email are free to be reused.
+    /// Called by profile delete flows to keep IAM in sync (no orphan accounts).
+    /// </summary>
+    Task DeleteAccountAsync(int accountId);
 }

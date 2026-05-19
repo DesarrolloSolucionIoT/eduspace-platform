@@ -16,4 +16,10 @@ public interface IExternalIamService
     /// Best-effort: callers must handle failures gracefully.
     /// </summary>
     Task RequestActivationEmailAsync(int accountId, string email, string fullName);
+
+    /// <summary>
+    /// Removes the IAM account linked to a profile that was just deleted, so the
+    /// username/email can be reused. Best-effort: failures must not surface as 5xx.
+    /// </summary>
+    Task DeleteAccountAsync(int accountId);
 }

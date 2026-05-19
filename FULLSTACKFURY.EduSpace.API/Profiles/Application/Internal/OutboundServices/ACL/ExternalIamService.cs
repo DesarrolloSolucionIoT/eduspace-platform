@@ -18,4 +18,7 @@ public class ExternalIamService(IIamContextFacade iamContextFacade) : IExternalI
 
     public Task RequestActivationEmailAsync(int accountId, string email, string fullName)
         => iamContextFacade.RequestActivationEmailAsync(accountId, email, fullName);
+
+    public Task DeleteAccountAsync(int accountId)
+        => iamContextFacade.DeleteAccountAsync(accountId);
 }

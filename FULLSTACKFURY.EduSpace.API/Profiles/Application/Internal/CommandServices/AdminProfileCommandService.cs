@@ -72,7 +72,24 @@ public class AdminProfileCommandService(
         var adminProfile = await adminProfileRepository.FindByIdAsync(command.Id);
         if (adminProfile is null) throw new AdminProfileNotFoundException(command.Id);
 
+        var linkedAccountId = adminProfile.AccountId.Id;
+
         adminProfileRepository.Remove(adminProfile);
         await unitOfWork.CompleteAsync();
+
+        // Cascade-delete the IAM account so the username/email can be reused.
+        // Best-effort: a failure here leaves an orphan account but the profile
+        // is already gone — must not 5xx (Design Decision 4, academic fallback).
+        try
+        {
+            await externalIamService.DeleteAccountAsync(linkedAccountId);
+        }
+        catch (Exception iamEx)
+        {
+            logger.LogError(iamEx,
+                "Orphan IAM account left behind: profile {ProfileId} was deleted but " +
+                "DeleteAccountAsync failed for account {AccountId}. Clean up manually.",
+                command.Id, linkedAccountId);
+        }
     }
 }

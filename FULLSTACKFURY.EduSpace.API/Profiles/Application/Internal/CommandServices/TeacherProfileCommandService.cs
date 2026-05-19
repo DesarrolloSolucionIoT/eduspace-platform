@@ -60,7 +60,23 @@ public class TeacherProfileCommandService(
         var teacherProfile = await teacherProfileRepository.FindByIdAsync(command.Id);
         if (teacherProfile is null) throw new TeacherProfileNotFoundException(command.Id);
 
+        var linkedAccountId = teacherProfile.AccountId.Id;
+
         teacherProfileRepository.Remove(teacherProfile);
         await unitOfWork.CompleteAsync();
+
+        // Cascade-delete the IAM account so the username/email can be reused.
+        // Best-effort: mirrors AdminProfileCommandService delete semantics.
+        try
+        {
+            await externalIamService.DeleteAccountAsync(linkedAccountId);
+        }
+        catch (Exception iamEx)
+        {
+            logger.LogError(iamEx,
+                "Orphan IAM account left behind: teacher profile {ProfileId} was deleted but " +
+                "DeleteAccountAsync failed for account {AccountId}. Clean up manually.",
+                command.Id, linkedAccountId);
+        }
     }
 }

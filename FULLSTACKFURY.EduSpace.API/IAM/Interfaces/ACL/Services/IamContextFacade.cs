@@ -57,4 +57,19 @@ public class IamContextFacade(
         logger.LogInformation(
             "Activation email requested for account {AccountId} → {Email}", accountId, email);
     }
+
+    public async Task DeleteAccountAsync(int accountId)
+    {
+        var account = await accountRepository.FindByIdAsync(accountId);
+        if (account is null)
+        {
+            logger.LogWarning("DeleteAccountAsync: account {AccountId} not found (already gone?)", accountId);
+            return;
+        }
+
+        accountRepository.Remove(account);
+        await unitOfWork.CompleteAsync();
+
+        logger.LogInformation("Account {AccountId} deleted (profile cascade)", accountId);
+    }
 }

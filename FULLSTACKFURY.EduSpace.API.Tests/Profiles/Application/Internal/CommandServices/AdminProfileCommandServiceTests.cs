@@ -297,4 +297,39 @@ public class AdminProfileCommandServiceTests
         // Assert
         await act.Should().ThrowAsync<AdminProfileNotFoundException>();
     }
+
+    [Fact]
+    public async Task Handle_DeleteAdmin_WhenProfileExists_ShouldDeleteLinkedIamAccount()
+    {
+        // Arrange — profile carries AccountId(2) per ProfileTestBuilder.ValidAdminProfile
+        var existing = ProfileTestBuilder.ValidAdminProfile();
+        var command = new DeleteAdminProfileCommand(1);
+        _repo.FindByIdAsync(1).Returns(
+            Task.FromResult<FULLSTACKFURY.EduSpace.API.Profiles.Domain.Model.Aggregates.AdminProfile?>(existing));
+
+        // Act
+        await _sut.Handle(command);
+
+        // Assert
+        await _iamService.Received(1).DeleteAccountAsync(existing.AccountId.Id);
+    }
+
+    [Fact]
+    public async Task Handle_DeleteAdmin_WhenIamDeleteFails_ShouldLogAndNotRethrow()
+    {
+        // Arrange — profile row already gone; IAM cleanup is best-effort so the
+        // controller still reports success and the admin can re-register manually.
+        var existing = ProfileTestBuilder.ValidAdminProfile();
+        var command = new DeleteAdminProfileCommand(1);
+        _repo.FindByIdAsync(1).Returns(
+            Task.FromResult<FULLSTACKFURY.EduSpace.API.Profiles.Domain.Model.Aggregates.AdminProfile?>(existing));
+        _iamService.DeleteAccountAsync(Arg.Any<int>())
+            .Returns(Task.FromException(new Exception("IAM unreachable")));
+
+        // Act
+        var act = async () => await _sut.Handle(command);
+
+        // Assert
+        await act.Should().NotThrowAsync();
+    }
 }

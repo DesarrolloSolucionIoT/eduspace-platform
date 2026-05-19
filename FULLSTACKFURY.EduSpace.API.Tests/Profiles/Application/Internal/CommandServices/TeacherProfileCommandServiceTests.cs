@@ -272,4 +272,36 @@ public class TeacherProfileCommandServiceTests
         // Assert
         await act.Should().ThrowAsync<TeacherProfileNotFoundException>();
     }
+
+    [Fact]
+    public async Task Handle_DeleteTeacher_WhenProfileExists_ShouldDeleteLinkedIamAccount()
+    {
+        // Arrange — teacher carries AccountId(1) per ProfileTestBuilder.ValidTeacherProfile
+        var existing = ProfileTestBuilder.ValidTeacherProfile();
+        var command = new DeleteTeacherProfileCommand(1);
+        _repo.FindByIdAsync(1).Returns(Task.FromResult<FULLSTACKFURY.EduSpace.API.Profiles.Domain.Model.Aggregates.TeacherProfile?>(existing));
+
+        // Act
+        await _sut.Handle(command);
+
+        // Assert
+        await _iamService.Received(1).DeleteAccountAsync(existing.AccountId.Id);
+    }
+
+    [Fact]
+    public async Task Handle_DeleteTeacher_WhenIamDeleteFails_ShouldLogAndNotRethrow()
+    {
+        // Arrange — best-effort cleanup, mirrors admin path so the controller still 200s.
+        var existing = ProfileTestBuilder.ValidTeacherProfile();
+        var command = new DeleteTeacherProfileCommand(1);
+        _repo.FindByIdAsync(1).Returns(Task.FromResult<FULLSTACKFURY.EduSpace.API.Profiles.Domain.Model.Aggregates.TeacherProfile?>(existing));
+        _iamService.DeleteAccountAsync(Arg.Any<int>())
+            .Returns(Task.FromException(new Exception("IAM unreachable")));
+
+        // Act
+        var act = async () => await _sut.Handle(command);
+
+        // Assert
+        await act.Should().NotThrowAsync();
+    }
 }
