@@ -9,12 +9,16 @@ namespace FULLSTACKFURY.EduSpace.API.IAM.Domain.Services;
 public interface IAccountCommandService
 {
     Task Handle(SignUpCommand command);
-    Task Handle(SignInCommand command);
 
     Task<(Account account, string accessToken, string refreshToken, int? profileId, TeacherProfile? teacherProfile,
         AdminProfile? adminProfile, IEnumerable<Classroom>? classrooms, IEnumerable<Meeting>? meetings)>
-        Handle(VerifyCodeCommand command);
+        Handle(SignInCommand command);
+
+    Task Handle(ActivateAccountCommand command);
+
+    Task Handle(RequestAccountActivationCommand command);
 
     Task<(string newAccessToken, string newRefreshToken)> Handle(RefreshAccessTokenCommand command);
+
     Task Handle(LogoutCommand command);
 }

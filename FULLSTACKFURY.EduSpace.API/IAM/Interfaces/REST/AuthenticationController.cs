@@ -1,5 +1,6 @@
 using System.Net.Mime;
 using FULLSTACKFURY.EduSpace.API.IAM.Domain.Model.Commands;
+using FULLSTACKFURY.EduSpace.API.IAM.Domain.Model.Exceptions;
 using FULLSTACKFURY.EduSpace.API.IAM.Domain.Services;
 using FULLSTACKFURY.EduSpace.API.IAM.Infrastructure.Tokens.JWT.Configuration;
 using FULLSTACKFURY.EduSpace.API.IAM.Interfaces.REST.Resources;
@@ -40,31 +41,19 @@ public class AuthenticationController(
     [HttpPost("sign-in")]
     [SwaggerOperation(
         Summary = "Sign in",
-        Description = "Initiates sign-in; sends a 6-digit verification code to the account's email.",
+        Description = "Validates credentials and returns JWT + refresh token directly.",
         OperationId = "SignIn",
         Tags = new[] { "Authentication" })]
-    [SwaggerResponse(StatusCodes.Status200OK, "Verification code sent.")]
+    [SwaggerResponse(StatusCodes.Status200OK, "Authenticated.", typeof(AuthenticatedAccountResource))]
+    [SwaggerResponse(StatusCodes.Status403Forbidden, "Account not activated.")]
     public async Task<IActionResult> SignIn([FromBody] SignInResource resource)
     {
-        var signInCommand = SignInCommandFromResourceAssembler.ToCommandFromResource(resource);
-        await accountCommandService.Handle(signInCommand);
-        return Ok(new { message = "Verification code sent to your email." });
-    }
+        try
+        {
+            var signInCommand = SignInCommandFromResourceAssembler.ToCommandFromResource(resource);
+            var result = await accountCommandService.Handle(signInCommand);
 
-    [AllowAnonymous]
-    [HttpPost("verify-code")]
-    [SwaggerOperation(
-        Summary = "Verify Code and Sign In",
-        Description = "Verifies the 2FA code and returns JWT + refresh token with complete user profile.",
-        OperationId = "VerifyCode",
-        Tags = new[] { "Authentication" })]
-    [SwaggerResponse(StatusCodes.Status200OK, "The user was authenticated.", typeof(AuthenticatedAccountResource))]
-    public async Task<IActionResult> VerifyCode([FromBody] VerifyCodeResource resource)
-    {
-        var verifyCodeCommand = VerifyCodeCommandFromResourceAssembler.ToCommandFromResource(resource);
-        var result = await accountCommandService.Handle(verifyCodeCommand);
-        var authenticatedAccountResource = AuthenticatedAccountResourceFromEntityAssembler
-            .ToResourceFromEntity(
+            var authenticatedAccountResource = AuthenticatedAccountResourceFromEntityAssembler.ToResourceFromEntity(
                 result.account,
                 result.accessToken,
                 result.refreshToken,
@@ -73,9 +62,61 @@ public class AuthenticationController(
                 result.teacherProfile,
                 result.adminProfile,
                 result.classrooms,
-                result.meetings
-            );
-        return Ok(authenticatedAccountResource);
+                result.meetings);
+
+            return Ok(authenticatedAccountResource);
+        }
+        catch (AccountNotActivatedException)
+        {
+            return StatusCode(403, new
+            {
+                code = "AccountNotActivated",
+                message = "Tu cuenta aún no está activada. Revisá tu correo."
+            });
+        }
+    }
+
+    [AllowAnonymous]
+    [HttpPost("activate")]
+    [SwaggerOperation(
+        Summary = "Activate account",
+        Description = "Validates the activation token and activates the account.",
+        OperationId = "ActivateAccount",
+        Tags = new[] { "Authentication" })]
+    [SwaggerResponse(StatusCodes.Status204NoContent, "Account activated successfully.")]
+    [SwaggerResponse(StatusCodes.Status400BadRequest, "Invalid, expired, or already-used token.")]
+    public async Task<IActionResult> Activate([FromBody] ActivateAccountResource resource)
+    {
+        try
+        {
+            var command = ActivateAccountCommandFromResourceAssembler.ToCommandFromResource(resource);
+            await accountCommandService.Handle(command);
+            return NoContent();
+        }
+        catch (InvalidActivationTokenException)
+        {
+            return BadRequest(new
+            {
+                code = "InvalidToken",
+                message = "El enlace de activación no es válido."
+            });
+        }
+        catch (ActivationTokenExpiredException)
+        {
+            return BadRequest(new
+            {
+                code = "TokenExpired",
+                message = "El enlace de activación expiró. Pedí uno nuevo."
+            });
+        }
+        catch (ActivationTokenAlreadyUsedException)
+        {
+            return BadRequest(new
+            {
+                code = "TokenAlreadyUsed",
+                message = "Este enlace ya fue usado."
+            });
+        }
     }
 
     [AllowAnonymous]

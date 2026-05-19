@@ -21,7 +21,7 @@ public class AccountCommandServiceRefreshAndLogoutTests
 {
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
     private readonly IAccountRepository _accountRepository = Substitute.For<IAccountRepository>();
-    private readonly IVerificationCodeRepository _verificationCodeRepository = Substitute.For<IVerificationCodeRepository>();
+    private readonly IActivationTokenRepository _activationTokenRepository = Substitute.For<IActivationTokenRepository>();
     private readonly ITokenService _tokenService = Substitute.For<ITokenService>();
     private readonly IHashingService _hashingService = Substitute.For<IHashingService>();
     private readonly IEmailService _emailService = Substitute.For<IEmailService>();
@@ -33,7 +33,7 @@ public class AccountCommandServiceRefreshAndLogoutTests
     private readonly ILogger<AccountCommandService> _logger = Substitute.For<ILogger<AccountCommandService>>();
 
     private AccountCommandService CreateSut() => new(
-        _unitOfWork, _accountRepository, _verificationCodeRepository,
+        _unitOfWork, _accountRepository, _activationTokenRepository,
         _tokenService, _hashingService, _emailService, _refreshTokenService,
         _teacherProfileRepository, _adminProfileRepository,
         _classroomQueryService, _meetingQueryService, _logger);

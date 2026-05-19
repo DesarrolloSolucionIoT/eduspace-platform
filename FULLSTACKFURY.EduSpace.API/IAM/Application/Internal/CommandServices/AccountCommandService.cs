@@ -21,7 +21,7 @@ namespace FULLSTACKFURY.EduSpace.API.IAM.Application.Internal.CommandServices;
 public class AccountCommandService(
     IUnitOfWork unitOfWork,
     IAccountRepository accountRepository,
-    IVerificationCodeRepository verificationCodeRepository,
+    IActivationTokenRepository activationTokenRepository,
     ITokenService tokenService,
     IHashingService hashingService,
     IEmailService emailService,
@@ -54,7 +54,14 @@ public class AccountCommandService(
         }
     }
 
-    public async Task Handle(SignInCommand command)
+    /// <summary>
+    /// Validates credentials + activation status, then returns the JWT bundle directly.
+    /// No 6-digit code. No email. Password check → IsActive check → JWT (REQ-006, REQ-007).
+    /// </summary>
+    public async Task<(Account account, string accessToken, string refreshToken, int? profileId,
+        TeacherProfile? teacherProfile, AdminProfile? adminProfile,
+        IEnumerable<Classroom>? classrooms, IEnumerable<Meeting>? meetings)>
+        Handle(SignInCommand command)
     {
         var account = await accountRepository.FindByUsername(command.Username);
         if (account is null || !hashingService.VerifyPassword(command.Password, account.PasswordHash))
@@ -63,68 +70,11 @@ public class AccountCommandService(
             throw new InvalidCredentialsException();
         }
 
-        var code = System.Security.Cryptography.RandomNumberGenerator.GetInt32(100000, 1000000).ToString();
-
-        var verificationCode = new VerificationCode
+        if (!account.IsActive)
         {
-            AccountId = account.Id,
-            Code = code,
-            ExpirationDate = DateTime.UtcNow.AddMinutes(10)
-        };
-
-        await verificationCodeRepository.AddAsync(verificationCode);
-        await unitOfWork.CompleteAsync();
-
-        // Resolve user email via Profiles ACL (N+1 fixed — uses targeted lookup)
-        string? userEmail = null;
-        var teacher = await teacherProfileRepository.FindByAccountIdAsync(account.Id);
-        if (teacher != null)
-        {
-            userEmail = teacher.ProfilePrivateInformation.Email;
+            logger.LogWarning("Sign-in blocked — account {AccountId} is not activated", account.Id);
+            throw new AccountNotActivatedException();
         }
-        else
-        {
-            var admin = await adminProfileRepository.FindByAccountIdAsync(account.Id);
-            if (admin != null) userEmail = admin.ProfilePrivateInformation.Email;
-        }
-
-        if (string.IsNullOrEmpty(userEmail))
-        {
-            logger.LogWarning("No profile email found for account {AccountId}", account.Id);
-            throw new AccountNotFoundException("User profile email not found. Please complete your profile setup.");
-        }
-
-        await emailService.SendEmailAsync(
-            userEmail,
-            "Tu código de verificación de EduSpace",
-            $"Tu código es: {code}");
-
-        logger.LogDebug("Verification code sent to account {AccountId}", account.Id);
-    }
-
-    public async Task<(Account account, string accessToken, string refreshToken, int? profileId,
-        TeacherProfile? teacherProfile, AdminProfile? adminProfile,
-        IEnumerable<Classroom>? classrooms, IEnumerable<Meeting>? meetings)>
-        Handle(VerifyCodeCommand command)
-    {
-        var account = await accountRepository.FindByUsername(command.Username);
-        if (account is null)
-        {
-            logger.LogWarning("Verify code attempted for unknown username {Username}", command.Username);
-            throw new AccountNotFoundException();
-        }
-
-        var verificationCode = await verificationCodeRepository
-            .FindActiveByAccountIdAndCodeAsync(account.Id, command.Code);
-
-        if (verificationCode is null)
-        {
-            logger.LogWarning("Invalid or expired verification code for account {AccountId}", account.Id);
-            throw new InvalidVerificationCodeException();
-        }
-
-        verificationCode.MarkAsUsed();
-        await unitOfWork.CompleteAsync();
 
         var accessToken = tokenService.GenerateToken(account);
         var (rawRefreshToken, _) = await refreshTokenService.CreateForAccountAsync(account.Id);
@@ -156,6 +106,29 @@ public class AccountCommandService(
 
         logger.LogDebug("Account {AccountId} successfully authenticated", account.Id);
         return (account, accessToken, rawRefreshToken, profileId, teacherProfile, adminProfile, classrooms, meetings);
+    }
+
+    /// <summary>
+    /// Delegates to <see cref="ActivateAccountCommandHandler"/> (REQ-009).
+    /// </summary>
+    public async Task Handle(ActivateAccountCommand command)
+    {
+        var handler = new ActivateAccountCommandHandler(
+            activationTokenRepository, accountRepository, unitOfWork, logger as ILogger<ActivateAccountCommandHandler>
+            ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<ActivateAccountCommandHandler>.Instance);
+        await handler.Handle(command);
+    }
+
+    /// <summary>
+    /// Delegates to <see cref="RequestAccountActivationCommandHandler"/> (REQ-010).
+    /// </summary>
+    public async Task Handle(RequestAccountActivationCommand command)
+    {
+        var handler = new RequestAccountActivationCommandHandler(
+            activationTokenRepository, emailService, unitOfWork,
+            logger as ILogger<RequestAccountActivationCommandHandler>
+            ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<RequestAccountActivationCommandHandler>.Instance);
+        await handler.Handle(command);
     }
 
     public async Task<(string newAccessToken, string newRefreshToken)> Handle(RefreshAccessTokenCommand command)
