@@ -154,6 +154,48 @@ public class AdminProfileCommandServiceTests
     }
 
     // =========================================================================
+    // Handle(CreateAdministratorProfileCommand) — activation email wiring
+    // =========================================================================
+
+    [Fact]
+    public async Task Handle_CreateAdmin_WhenAccountCreatedSuccessfully_CallsRequestActivationEmailWithProfileEmailAndFullName()
+    {
+        // Arrange
+        var command = ProfileTestBuilder.ValidCreateAdminCommand(
+            username: "admin_user",
+            email: "admin@edu.pe");
+        command = command with { FirstName = "Luisa", LastName = "Torres" };
+        var accountId = ProfileTestBuilder.ValidAccountId(42);
+        _iamService.CreateAccount(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>())
+            .Returns(Task.FromResult(accountId));
+
+        // Act
+        await _sut.Handle(command);
+
+        // Assert
+        await _iamService.Received(1).RequestActivationEmailAsync(
+            accountId.Id, command.Email, $"{command.FirstName} {command.LastName}");
+    }
+
+    [Fact]
+    public async Task Handle_CreateAdmin_WhenEmailServiceThrows_StillReturnsCreatedAdminAndLogsError()
+    {
+        // Arrange
+        var command = ProfileTestBuilder.ValidCreateAdminCommand();
+        var accountId = ProfileTestBuilder.ValidAccountId(42);
+        _iamService.CreateAccount(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>())
+            .Returns(Task.FromResult(accountId));
+        _iamService.RequestActivationEmailAsync(Arg.Any<int>(), Arg.Any<string>(), Arg.Any<string>())
+            .Returns(Task.FromException(new Exception("Email provider unreachable")));
+
+        // Act
+        var result = await _sut.Handle(command);
+
+        // Assert
+        result.Should().NotBeNull("account was persisted even though email delivery failed");
+    }
+
+    // =========================================================================
     // Handle(UpdateAdminProfileCommand)
     // =========================================================================
 

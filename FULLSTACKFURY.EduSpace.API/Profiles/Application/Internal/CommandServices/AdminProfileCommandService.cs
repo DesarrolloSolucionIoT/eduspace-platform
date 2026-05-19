@@ -25,6 +25,23 @@ public class AdminProfileCommandService(
             await adminProfileRepository.AddAsync(adminProfile);
             await unitOfWork.CompleteAsync();
 
+            // Best-effort activation email — account already persisted; a delivery failure
+            // must not roll back the creation (REQ-021 / Design Decision 4 academic fallback).
+            try
+            {
+                await externalIamService.RequestActivationEmailAsync(
+                    accountId.Id,
+                    command.Email,
+                    $"{command.FirstName} {command.LastName}");
+            }
+            catch (Exception emailEx)
+            {
+                logger.LogError(emailEx,
+                    "Activation email could not be sent for admin account {AccountId} ({Email}). " +
+                    "The account was created successfully — assist the user manually if needed.",
+                    accountId.Id, command.Email);
+            }
+
             return adminProfile;
         }
         catch (InvalidProfileDataException)

@@ -20,7 +20,6 @@ public sealed class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logge
         { typeof(RefreshTokenAlreadyUsedException),   StatusCodes.Status401Unauthorized },
         { typeof(RefreshTokenExpiredException),       StatusCodes.Status401Unauthorized },
         { typeof(AccountNotFoundException),           StatusCodes.Status404NotFound },
-        { typeof(InvalidVerificationCodeException),   StatusCodes.Status400BadRequest },
 
         // ── Profiles ─────────────────────────────────────────────────────────────
         { typeof(InvalidProfileDataException),        StatusCodes.Status400BadRequest },

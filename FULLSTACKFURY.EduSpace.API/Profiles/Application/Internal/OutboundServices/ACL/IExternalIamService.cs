@@ -5,4 +5,15 @@ namespace FULLSTACKFURY.EduSpace.API.Profiles.Application.Internal.OutboundServi
 public interface IExternalIamService
 {
     Task<AccountId> CreateAccount(string username, string password, string role);
+
+    /// <summary>
+    /// Activates a teacher account immediately after creation — no email sent (REQ-018).
+    /// </summary>
+    Task ActivateAccountAsync(int accountId);
+
+    /// <summary>
+    /// Sends an activation email to an admin after account creation (REQ-017).
+    /// Best-effort: callers must handle failures gracefully.
+    /// </summary>
+    Task RequestActivationEmailAsync(int accountId, string email, string fullName);
 }

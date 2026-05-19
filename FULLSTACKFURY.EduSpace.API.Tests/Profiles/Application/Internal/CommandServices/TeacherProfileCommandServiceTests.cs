@@ -157,6 +157,26 @@ public class TeacherProfileCommandServiceTests
     }
 
     // =========================================================================
+    // Handle(CreateTeacherProfileCommand) — auto-activation wiring
+    // =========================================================================
+
+    [Fact]
+    public async Task Handle_CreateTeacher_WhenAccountCreated_CallsActivateAccountOnIamFacade()
+    {
+        // Arrange
+        var command = ProfileTestBuilder.ValidCreateTeacherCommand();
+        var accountId = ProfileTestBuilder.ValidAccountId(55);
+        _iamService.CreateAccount(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>())
+            .Returns(Task.FromResult(accountId));
+
+        // Act
+        await _sut.Handle(command);
+
+        // Assert
+        await _iamService.Received(1).ActivateAccountAsync(accountId.Id);
+    }
+
+    // =========================================================================
     // Handle(UpdateTeacherProfileCommand)
     // =========================================================================
 

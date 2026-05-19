@@ -12,4 +12,10 @@ public class ExternalIamService(IIamContextFacade iamContextFacade) : IExternalI
         if (accountId == 0) throw new InvalidProfileDataException("Error creating the account in IAM context.");
         return new AccountId(accountId);
     }
+
+    public Task ActivateAccountAsync(int accountId)
+        => iamContextFacade.ActivateAccountAsync(accountId);
+
+    public Task RequestActivationEmailAsync(int accountId, string email, string fullName)
+        => iamContextFacade.RequestActivationEmailAsync(accountId, email, fullName);
 }

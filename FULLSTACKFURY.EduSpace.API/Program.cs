@@ -153,7 +153,7 @@ builder.Services.AddScoped<IProfilesContextFacade, ProfilesContextFacade>();
 // IAM — auth infrastructure
 builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 builder.Services.AddScoped<IRefreshTokenService, RefreshTokenService>();
-builder.Services.AddScoped<IVerificationCodeRepository, VerificationCodeRepository>();
+builder.Services.AddScoped<IActivationTokenRepository, ActivationTokenRepository>();
 
 builder.Services.AddScoped<IReportRepository, ReportRepository>();
 builder.Services.AddScoped<IReportCommandService, ReportCommandService>();

@@ -21,6 +21,10 @@ public class TeacherProfileCommandService(
         try
         {
             var accountId = await externalIamService.CreateAccount(command.Username, command.Password, ProfileRoles.Teacher);
+
+            // Teachers are auto-activated immediately — no email required (REQ-008 / Design Decision 3).
+            await externalIamService.ActivateAccountAsync(accountId.Id);
+
             var teacherProfile = new TeacherProfile(command, accountId);
 
             await teacherProfileRepository.AddAsync(teacherProfile);
