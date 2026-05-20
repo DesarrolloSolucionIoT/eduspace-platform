@@ -30,7 +30,8 @@ public class AccountCommandService(
     IAdminProfileRepository adminProfileRepository,
     IClassroomQueryService classroomQueryService,
     IMeetingQueryService meetingQueryService,
-    ILogger<AccountCommandService> logger)
+    ILogger<AccountCommandService> logger,
+    ILoggerFactory loggerFactory)
     : IAccountCommandService
 {
     public async Task Handle(SignUpCommand command)
@@ -64,9 +65,17 @@ public class AccountCommandService(
         Handle(SignInCommand command)
     {
         var account = await accountRepository.FindByUsername(command.Username);
+        if (account is null && command.Username.Contains('@'))
+        {
+            var accountId = await teacherProfileRepository.FindAccountIdByEmailAsync(command.Username)
+                            ?? await adminProfileRepository.FindAccountIdByEmailAsync(command.Username);
+            if (accountId is not null)
+                account = await accountRepository.FindByIdAsync(accountId.Value);
+        }
+
         if (account is null || !hashingService.VerifyPassword(command.Password, account.PasswordHash))
         {
-            logger.LogWarning("Failed sign-in attempt for username {Username}", command.Username);
+            logger.LogWarning("Failed sign-in attempt for identifier {Identifier}", command.Username);
             throw new InvalidCredentialsException();
         }
 
@@ -114,8 +123,8 @@ public class AccountCommandService(
     public async Task Handle(ActivateAccountCommand command)
     {
         var handler = new ActivateAccountCommandHandler(
-            activationTokenRepository, accountRepository, unitOfWork, logger as ILogger<ActivateAccountCommandHandler>
-            ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<ActivateAccountCommandHandler>.Instance);
+            activationTokenRepository, accountRepository, unitOfWork,
+            loggerFactory.CreateLogger<ActivateAccountCommandHandler>());
         await handler.Handle(command);
     }
 
@@ -126,8 +135,7 @@ public class AccountCommandService(
     {
         var handler = new RequestAccountActivationCommandHandler(
             activationTokenRepository, emailService, unitOfWork,
-            logger as ILogger<RequestAccountActivationCommandHandler>
-            ?? Microsoft.Extensions.Logging.Abstractions.NullLogger<RequestAccountActivationCommandHandler>.Instance);
+            loggerFactory.CreateLogger<RequestAccountActivationCommandHandler>());
         await handler.Handle(command);
     }
 

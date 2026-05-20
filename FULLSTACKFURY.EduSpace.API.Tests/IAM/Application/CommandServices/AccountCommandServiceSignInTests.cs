@@ -12,6 +12,7 @@ using FULLSTACKFURY.EduSpace.API.Shared.Domain.Repositories;
 using FULLSTACKFURY.EduSpace.API.SpacesAndResourceManagement.Domain.Services;
 using FULLSTACKFURY.EduSpace.API.Tests.Shared.TestBuilders.IAM;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using Xunit;
 
@@ -36,7 +37,7 @@ public class AccountCommandServiceSignInTests
         _unitOfWork, _accountRepository, _activationTokenRepository,
         _tokenService, _hashingService, _emailService, _refreshTokenService,
         _teacherProfileRepository, _adminProfileRepository,
-        _classroomQueryService, _meetingQueryService, _logger);
+        _classroomQueryService, _meetingQueryService, _logger, NullLoggerFactory.Instance);
 
     private Account BuildActiveAccount(string username, string role = "RoleAdmin")
     {
@@ -234,5 +235,105 @@ public class AccountCommandServiceSignInTests
         result.teacherProfile.Should().BeSameAs(teacherProfile);
         result.adminProfile.Should().BeNull();
         result.classrooms.Should().NotBeNull();
+    }
+
+    // ─── SignIn — email as identifier (fallback to profile email lookup) ─────────
+
+    [Fact]
+    public async Task Handle_SignIn_WhenInputIsEmail_AndUsernameLookupMisses_FallsBackToTeacherProfileEmail()
+    {
+        // Arrange
+        const string email = "teacher@example.com";
+        const string username = "teacher.one";
+        var account = BuildActiveAccount(username, "RoleTeacher");
+        var teacherProfile = ProfileTestHelper.CreateTeacherProfile(email: email);
+
+        _accountRepository.FindByUsername(email).Returns((Account?)null);
+        _teacherProfileRepository.FindAccountIdByEmailAsync(email).Returns(account.Id);
+        _accountRepository.FindByIdAsync(account.Id).Returns(account);
+        _hashingService.VerifyPassword("pass", account.PasswordHash).Returns(true);
+        _tokenService.GenerateToken(account).Returns("tok");
+        var (refreshEntity, _) = RefreshToken.CreateNew(account.Id, TimeSpan.FromDays(14));
+        _refreshTokenService.CreateForAccountAsync(account.Id).Returns(("ref", refreshEntity));
+        _teacherProfileRepository.FindByAccountIdAsync(account.Id).Returns(teacherProfile);
+        _classroomQueryService
+            .Handle(Arg.Any<global::FULLSTACKFURY.EduSpace.API.SpacesAndResourceManagement.Domain.Model.Queries.GetAllClassroomsByTeacherIdQuery>())
+            .Returns(Enumerable.Empty<global::FULLSTACKFURY.EduSpace.API.SpacesAndResourceManagement.Domain.Model.Aggregates.Classroom>());
+        _meetingQueryService
+            .Handle(Arg.Any<global::FULLSTACKFURY.EduSpace.API.ReservationScheduling.Domain.Model.Queries.GetAllMeetingByTeacherIdQuery>())
+            .Returns(Enumerable.Empty<global::FULLSTACKFURY.EduSpace.API.ReservationScheduling.Domain.Model.Aggregates.Meeting>());
+
+        var sut = CreateSut();
+
+        // Act
+        var result = await sut.Handle(new SignInCommand(email, "pass"));
+
+        // Assert
+        result.accessToken.Should().Be("tok");
+        result.account.Should().BeSameAs(account);
+    }
+
+    [Fact]
+    public async Task Handle_SignIn_WhenInputIsEmail_AndTeacherMisses_FallsBackToAdminProfileEmail()
+    {
+        // Arrange
+        const string email = "admin@example.com";
+        const string username = "admin.one";
+        var account = BuildActiveAccount(username, "RoleAdmin");
+        var adminProfile = ProfileTestHelper.CreateAdminProfile(email: email);
+
+        _accountRepository.FindByUsername(email).Returns((Account?)null);
+        _teacherProfileRepository.FindAccountIdByEmailAsync(email).Returns((int?)null);
+        _adminProfileRepository.FindAccountIdByEmailAsync(email).Returns(account.Id);
+        _accountRepository.FindByIdAsync(account.Id).Returns(account);
+        _hashingService.VerifyPassword("pass", account.PasswordHash).Returns(true);
+        _tokenService.GenerateToken(account).Returns("tok");
+        var (refreshEntity, _) = RefreshToken.CreateNew(account.Id, TimeSpan.FromDays(14));
+        _refreshTokenService.CreateForAccountAsync(account.Id).Returns(("ref", refreshEntity));
+        _adminProfileRepository.FindByAccountIdAsync(account.Id).Returns(adminProfile);
+
+        var sut = CreateSut();
+
+        // Act
+        var result = await sut.Handle(new SignInCommand(email, "pass"));
+
+        // Assert
+        result.adminProfile.Should().BeSameAs(adminProfile);
+    }
+
+    [Fact]
+    public async Task Handle_SignIn_WhenInputIsEmail_AndNoProfileMatches_ThrowsInvalidCredentialsException()
+    {
+        // Arrange
+        const string email = "ghost@example.com";
+        _accountRepository.FindByUsername(email).Returns((Account?)null);
+        _teacherProfileRepository.FindAccountIdByEmailAsync(email).Returns((int?)null);
+        _adminProfileRepository.FindAccountIdByEmailAsync(email).Returns((int?)null);
+
+        var sut = CreateSut();
+
+        // Act
+        Func<Task> act = () => sut.Handle(new SignInCommand(email, "pass"));
+
+        // Assert
+        await act.Should().ThrowAsync<InvalidCredentialsException>();
+    }
+
+    [Fact]
+    public async Task Handle_SignIn_WhenInputHasNoAtSign_DoesNotInvokeEmailFallback()
+    {
+        // Arrange
+        const string username = "no_at_sign_here";
+        _accountRepository.FindByUsername(username).Returns((Account?)null);
+
+        var sut = CreateSut();
+
+        // Act
+        Func<Task> act = () => sut.Handle(new SignInCommand(username, "pass"));
+
+        // Assert
+        await act.Should().ThrowAsync<InvalidCredentialsException>();
+        await _teacherProfileRepository.DidNotReceive().FindAccountIdByEmailAsync(Arg.Any<string>());
+        await _adminProfileRepository.DidNotReceive().FindAccountIdByEmailAsync(Arg.Any<string>());
     }
 }

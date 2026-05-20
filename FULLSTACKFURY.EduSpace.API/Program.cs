@@ -196,13 +196,11 @@ builder.Services.Configure<TokenSettings>(builder.Configuration.GetSection("Toke
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IHashingService, HashingService>();
 
-// Register EmailService based on configuration:
-// real Resend when RESEND_API_KEY is set, mock otherwise.
-builder.Services.AddHttpClient();
-if (!string.IsNullOrWhiteSpace(builder.Configuration["RESEND_API_KEY"]))
-    builder.Services.AddScoped<IEmailService, EmailService>();
-else
-    builder.Services.AddScoped<IEmailService, MockEmailService>();
+// Email delivery via SendGrid — required in every environment (local + prod).
+if (string.IsNullOrWhiteSpace(builder.Configuration["SENDGRID_API_KEY"]))
+    throw new InvalidOperationException(
+        "SENDGRID_API_KEY is not configured. Set it in .env or environment variables.");
+builder.Services.AddScoped<IEmailService, EmailService>();
 
 // JWT authentication — validates tokens issued by TokenService
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

@@ -1,62 +1,45 @@
-using System.Net.Http.Headers;
-using System.Net.Http.Json;
 using FULLSTACKFURY.EduSpace.API.IAM.Application.Internal.OutboundServices;
+using SendGrid;
+using SendGrid.Helpers.Mail;
 
 namespace FULLSTACKFURY.EduSpace.API.IAM.Infrastructure.Services;
 
-public class EmailService : IEmailService
+public class EmailService(IConfiguration configuration, ILogger<EmailService> logger) : IEmailService
 {
-    private readonly IConfiguration _configuration;
-    private readonly ILogger<EmailService> _logger;
-    private readonly HttpClient _http;
-
-    public EmailService(IConfiguration configuration, ILogger<EmailService> logger, IHttpClientFactory httpClientFactory)
-    {
-        _configuration = configuration;
-        _logger = logger;
-        _http = httpClientFactory.CreateClient("Resend");
-        _http.BaseAddress ??= new Uri("https://api.resend.com/");
-    }
-
     public async Task SendEmailAsync(string to, string subject, string body)
     {
-        var apiKey = _configuration["RESEND_API_KEY"]
-                     ?? throw new InvalidOperationException("RESEND_API_KEY not configured");
-        var fromEmail = _configuration["RESEND_FROM"] ?? "onboarding@resend.dev";
-        var fromName = _configuration["RESEND_FROM_NAME"] ?? "EduSpace Platform";
+        var apiKey = configuration["SENDGRID_API_KEY"]
+                     ?? throw new InvalidOperationException("SENDGRID_API_KEY not configured");
+        var fromEmail = configuration["SENDGRID_FROM_EMAIL"] ?? "noreply@eduspace.app";
+        var fromName  = configuration["SENDGRID_FROM_NAME"]  ?? "EduSpace";
 
-        var payload = new
-        {
-            from = $"{fromName} <{fromEmail}>",
-            to = new[] { to },
-            subject,
-            html = $"<h3>Tu código es: {body}</h3>",
-            text = $"Tu código es: {body}"
-        };
+        var client  = new SendGridClient(apiKey);
+        var from    = new EmailAddress(fromEmail, fromName);
+        var toAddr  = new EmailAddress(to);
+        var msg     = MailHelper.CreateSingleEmail(from, toAddr, subject,
+            plainTextContent: $"Tu código es: {body}",
+            htmlContent: $"<h3>Tu código es: {body}</h3>");
 
-        using var request = new HttpRequestMessage(HttpMethod.Post, "emails") { Content = JsonContent.Create(payload) };
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
-
-        var response = await _http.SendAsync(request);
+        var response = await client.SendEmailAsync(msg);
 
         if (!response.IsSuccessStatusCode)
         {
-            var error = await response.Content.ReadAsStringAsync();
-            _logger.LogError("Resend send failed: {Status} {Body}", response.StatusCode, error);
-            throw new InvalidOperationException($"Resend failed: {response.StatusCode}");
+            var error = await response.Body.ReadAsStringAsync();
+            logger.LogError("SendGrid send failed: {Status} {Body}", response.StatusCode, error);
+            throw new InvalidOperationException($"SendGrid failed: {response.StatusCode}");
         }
 
-        _logger.LogInformation("Email enviado a {To} via Resend", to);
+        logger.LogInformation("Email enviado a {To} via SendGrid", to);
     }
 
     public async Task SendActivationEmailAsync(string to, string fullName, string rawToken)
     {
-        var apiKey = _configuration["RESEND_API_KEY"]
-                     ?? throw new InvalidOperationException("RESEND_API_KEY not configured");
-        var fromEmail = _configuration["RESEND_FROM"] ?? "onboarding@resend.dev";
-        var fromName = _configuration["RESEND_FROM_NAME"] ?? "EduSpace Platform";
+        var apiKey = configuration["SENDGRID_API_KEY"]
+                     ?? throw new InvalidOperationException("SENDGRID_API_KEY not configured");
+        var fromEmail = configuration["SENDGRID_FROM_EMAIL"] ?? "noreply@eduspace.app";
+        var fromName  = configuration["SENDGRID_FROM_NAME"]  ?? "EduSpace";
 
-        var frontendBaseUrl = _configuration["FRONTEND_BASE_URL"];
+        var frontendBaseUrl = configuration["FRONTEND_BASE_URL"];
         if (string.IsNullOrWhiteSpace(frontendBaseUrl))
             throw new InvalidOperationException(
                 "FRONTEND_BASE_URL no está configurado. No se puede generar el enlace de activación.");
@@ -92,27 +75,23 @@ public class EmailService : IEmailService
             </html>
             """;
 
-        var payload = new
-        {
-            from = $"{fromName} <{fromEmail}>",
-            to = new[] { to },
-            subject = "Activá tu cuenta de EduSpace",
-            html = htmlBody,
-            text = $"Hola {fullName},\n\nActivá tu cuenta haciendo clic en: {activationLink}\n\nEste enlace vence en 24 horas."
-        };
+        var client  = new SendGridClient(apiKey);
+        var from    = new EmailAddress(fromEmail, fromName);
+        var toAddr  = new EmailAddress(to);
+        var msg     = MailHelper.CreateSingleEmail(from, toAddr,
+            subject: "Activá tu cuenta de EduSpace",
+            plainTextContent: $"Hola {fullName},\n\nActivá tu cuenta haciendo clic en: {activationLink}\n\nEste enlace vence en 24 horas.",
+            htmlContent: htmlBody);
 
-        using var request = new HttpRequestMessage(HttpMethod.Post, "emails") { Content = JsonContent.Create(payload) };
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", apiKey);
-
-        var response = await _http.SendAsync(request);
+        var response = await client.SendEmailAsync(msg);
 
         if (!response.IsSuccessStatusCode)
         {
-            var error = await response.Content.ReadAsStringAsync();
-            _logger.LogError("Resend activation email failed: {Status} {Body}", response.StatusCode, error);
-            throw new InvalidOperationException($"Resend failed: {response.StatusCode}");
+            var error = await response.Body.ReadAsStringAsync();
+            logger.LogError("SendGrid activation email failed: {Status} {Body}", response.StatusCode, error);
+            throw new InvalidOperationException($"SendGrid failed: {response.StatusCode}");
         }
 
-        _logger.LogInformation("Activation email enviado a {To} via Resend", to);
+        logger.LogInformation("Activation email enviado a {To} via SendGrid", to);
     }
 }

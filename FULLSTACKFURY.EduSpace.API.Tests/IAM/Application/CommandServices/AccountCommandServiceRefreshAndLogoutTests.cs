@@ -12,6 +12,7 @@ using FULLSTACKFURY.EduSpace.API.Shared.Domain.Repositories;
 using FULLSTACKFURY.EduSpace.API.SpacesAndResourceManagement.Domain.Services;
 using FULLSTACKFURY.EduSpace.API.Tests.Shared.TestBuilders.IAM;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using Xunit;
 
@@ -36,7 +37,7 @@ public class AccountCommandServiceRefreshAndLogoutTests
         _unitOfWork, _accountRepository, _activationTokenRepository,
         _tokenService, _hashingService, _emailService, _refreshTokenService,
         _teacherProfileRepository, _adminProfileRepository,
-        _classroomQueryService, _meetingQueryService, _logger);
+        _classroomQueryService, _meetingQueryService, _logger, NullLoggerFactory.Instance);
 
     // ─── RefreshAccessToken — happy path ────────────────────────────────────────
 

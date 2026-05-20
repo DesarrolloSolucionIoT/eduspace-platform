@@ -11,6 +11,7 @@ using FULLSTACKFURY.EduSpace.API.ReservationScheduling.Domain.Services;
 using FULLSTACKFURY.EduSpace.API.Shared.Domain.Repositories;
 using FULLSTACKFURY.EduSpace.API.SpacesAndResourceManagement.Domain.Services;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 using Xunit;
 
@@ -35,7 +36,7 @@ public class AccountCommandServiceSignUpTests
         _unitOfWork, _accountRepository, _activationTokenRepository,
         _tokenService, _hashingService, _emailService, _refreshTokenService,
         _teacherProfileRepository, _adminProfileRepository,
-        _classroomQueryService, _meetingQueryService, _logger);
+        _classroomQueryService, _meetingQueryService, _logger, NullLoggerFactory.Instance);
 
     // ─── SignUp — happy path ─────────────────────────────────────────────────────
 
