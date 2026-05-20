@@ -1,7 +1,7 @@
 ﻿using FULLSTACKFURY.EduSpace.API.BreakdownManagement.Domain.Model.Aggregates;
-using FULLSTACKFURY.EduSpace.API.BreakdownManagement.Interface.REST.Resources;
+using FULLSTACKFURY.EduSpace.API.BreakdownManagement.Interfaces.REST.Resources;
 
-namespace FULLSTACKFURY.EduSpace.API.BreakdownManagement.Interface.REST.Transform;
+namespace FULLSTACKFURY.EduSpace.API.BreakdownManagement.Interfaces.REST.Transform;
 
 public static class ReportResourceFromEntityAssembler
 {

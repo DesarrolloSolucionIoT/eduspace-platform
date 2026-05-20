@@ -1,4 +1,4 @@
-namespace FULLSTACKFURY.EduSpace.API.BreakdownManagement.Interface.REST.Resources;
+namespace FULLSTACKFURY.EduSpace.API.BreakdownManagement.Interfaces.REST.Resources;
 
 /// <summary>
 /// REST response representation of a Report.

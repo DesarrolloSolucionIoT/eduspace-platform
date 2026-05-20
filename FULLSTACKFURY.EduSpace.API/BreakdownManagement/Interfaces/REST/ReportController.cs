@@ -2,13 +2,13 @@ using System.Net.Mime;
 using FULLSTACKFURY.EduSpace.API.BreakdownManagement.Domain.Model.Commands;
 using FULLSTACKFURY.EduSpace.API.BreakdownManagement.Domain.Model.Queries;
 using FULLSTACKFURY.EduSpace.API.BreakdownManagement.Domain.Services;
-using FULLSTACKFURY.EduSpace.API.BreakdownManagement.Interface.REST.Resources;
-using FULLSTACKFURY.EduSpace.API.BreakdownManagement.Interface.REST.Transform;
+using FULLSTACKFURY.EduSpace.API.BreakdownManagement.Interfaces.REST.Resources;
+using FULLSTACKFURY.EduSpace.API.BreakdownManagement.Interfaces.REST.Transform;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 
-namespace FULLSTACKFURY.EduSpace.API.BreakdownManagement.Interface.REST;
+namespace FULLSTACKFURY.EduSpace.API.BreakdownManagement.Interfaces.REST;
 
 [ApiController]
 [Route("api/v1/[controller]")]

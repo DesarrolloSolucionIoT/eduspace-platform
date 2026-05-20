@@ -27,5 +27,6 @@ riderModule.iml
 # AI / personal tooling (never commit)
 .atl/
 CLAUDE.md
+PROJECT.md
 .claude/
 .codex/

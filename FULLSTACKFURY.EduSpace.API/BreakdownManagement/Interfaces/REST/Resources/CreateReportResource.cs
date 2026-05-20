@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace FULLSTACKFURY.EduSpace.API.BreakdownManagement.Interface.REST.Resources;
+namespace FULLSTACKFURY.EduSpace.API.BreakdownManagement.Interfaces.REST.Resources;
 
 public record CreateReportResource(
     [Required] string KindOfReport,
