@@ -12,4 +12,4 @@
 /// <param name="TeacherId">
 ///     The ID of the teacher for the classroom.
 /// </param>
-public record CreateClassroomCommand(string Name, string Description, int TeacherId);
+public record CreateClassroomCommand(string Name, string Description, int TeacherId, string? ZoneId = null);

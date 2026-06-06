@@ -51,7 +51,7 @@ public class ClassroomCommandService(
         if (!await profileService.VerifyProfileAsync(command.TeacherId))
             throw new TeacherNotFoundForClassroomException(command.TeacherId);
 
-        classroom.Update(command.Name, command.Description, command.TeacherId);
+        classroom.Update(command.Name, command.Description, command.TeacherId, command.ZoneId);
 
         classroomRepository.Update(classroom);
         await unitOfWork.CompleteAsync();

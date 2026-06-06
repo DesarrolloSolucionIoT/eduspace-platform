@@ -18,6 +18,6 @@ public class ClassroomResourceFromEntityAssembler
     /// </returns>
     public static ClassroomResource ToResourceFromEntity(Domain.Model.Aggregates.Classroom entity)
     {
-        return new ClassroomResource(entity.Id, entity.Name, entity.Description, entity.TeacherId.TeacherIdentifier);
+        return new ClassroomResource(entity.Id, entity.Name, entity.Description, entity.TeacherId.TeacherIdentifier, entity.ZoneId);
     }
 }

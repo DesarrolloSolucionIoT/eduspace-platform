@@ -15,4 +15,4 @@
 /// <param name="TeacherId">
 ///     The unique identifier of the teacher.
 /// </param>
-public record ClassroomResource(int Id, string Name, string Description, int TeacherId);
+public record ClassroomResource(int Id, string Name, string Description, int TeacherId, string? ZoneId);

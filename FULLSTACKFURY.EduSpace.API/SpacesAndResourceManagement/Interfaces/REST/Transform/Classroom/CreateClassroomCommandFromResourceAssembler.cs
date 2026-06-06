@@ -19,6 +19,6 @@ public class CreateClassroomCommandFromResourceAssembler
     /// </returns>
     public static CreateClassroomCommand ToCommandFromResource(int teacherId, CreateClassroomResource resource)
     {
-        return new CreateClassroomCommand(resource.Name, resource.Description, teacherId);
+        return new CreateClassroomCommand(resource.Name, resource.Description, teacherId, resource.ZoneId);
     }
 }
