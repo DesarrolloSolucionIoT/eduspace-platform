@@ -22,6 +22,7 @@ public class AccountCommandService(
     IUnitOfWork unitOfWork,
     IAccountRepository accountRepository,
     IActivationTokenRepository activationTokenRepository,
+    IPasswordResetTokenRepository passwordResetTokenRepository,
     ITokenService tokenService,
     IHashingService hashingService,
     IEmailService emailService,
@@ -136,6 +137,29 @@ public class AccountCommandService(
         var handler = new RequestAccountActivationCommandHandler(
             activationTokenRepository, emailService, unitOfWork,
             loggerFactory.CreateLogger<RequestAccountActivationCommandHandler>());
+        await handler.Handle(command);
+    }
+
+    /// <summary>
+    /// Delegates to <see cref="RequestPasswordResetCommandHandler"/>.
+    /// </summary>
+    public async Task Handle(RequestPasswordResetCommand command)
+    {
+        var handler = new RequestPasswordResetCommandHandler(
+            passwordResetTokenRepository, teacherProfileRepository, adminProfileRepository,
+            emailService, unitOfWork,
+            loggerFactory.CreateLogger<RequestPasswordResetCommandHandler>());
+        await handler.Handle(command);
+    }
+
+    /// <summary>
+    /// Delegates to <see cref="ResetPasswordCommandHandler"/>.
+    /// </summary>
+    public async Task Handle(ResetPasswordCommand command)
+    {
+        var handler = new ResetPasswordCommandHandler(
+            passwordResetTokenRepository, accountRepository, hashingService, unitOfWork,
+            loggerFactory.CreateLogger<ResetPasswordCommandHandler>());
         await handler.Handle(command);
     }
 

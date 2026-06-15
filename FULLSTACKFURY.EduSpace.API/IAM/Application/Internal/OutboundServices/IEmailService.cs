@@ -11,4 +11,12 @@ public interface IEmailService
     /// if the env var is absent (REQ-021).
     /// </summary>
     Task SendActivationEmailAsync(string to, string fullName, string rawToken);
+
+    /// <summary>
+    /// Sends the password-reset email containing the link
+    /// {FRONTEND_BASE_URL}/reset-password?token={rawToken} in Spanish (Rioplatense voseo).
+    /// Reads FRONTEND_BASE_URL from configuration — throws <see cref="InvalidOperationException"/>
+    /// if the env var is absent.
+    /// </summary>
+    Task SendPasswordResetEmailAsync(string to, string fullName, string rawToken);
 }
