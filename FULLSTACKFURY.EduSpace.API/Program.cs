@@ -187,6 +187,7 @@ builder.Services.AddScoped<ISpacesAndResourceManagementFacade, SpacesAndResource
 
 // Shared Areas
 builder.Services.AddScoped<ISharedAreaRepository, SharedAreaRepository>();
+builder.Services.AddScoped<ISharedAreaReservationRepository, SharedAreaReservationRepository>();
 builder.Services.AddScoped<ISharedAreaCommandService, SharedAreaCommandService>();
 builder.Services.AddScoped<ISharedAreaQueryService, SharedAreaQueryService>();
 

@@ -135,6 +135,38 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
         builder.Entity<SharedArea>().Property(sa => sa.Capacity).IsRequired();
         builder.Entity<SharedArea>().Property(sa => sa.Description).IsRequired();
 
+        // Reserve a shared space
+        
+        builder.Entity<SharedAreaReservation>().HasKey(sr => sr.Id);
+        builder.Entity<SharedAreaReservation>().Property(sr => sr.Id).IsRequired().ValueGeneratedOnAdd();
+        builder.Entity<SharedAreaReservation>().Property(sr => sr.SharedAreaId).IsRequired();
+        builder.Entity<SharedAreaReservation>().Property(sr => sr.TeacherId).IsRequired();
+        builder.Entity<SharedAreaReservation>().Property(sr => sr.ReservationDate).IsRequired();
+        builder.Entity<SharedAreaReservation>().Property(sr => sr.ReservationDate)
+            .HasConversion(v => v.ToDateTime(TimeOnly.MinValue),
+                v => DateOnly.FromDateTime(v));
+
+        builder.Entity<SharedAreaReservation>().Property(sr => sr.StartTime)
+            .HasConversion(v => v.ToTimeSpan(), v => TimeOnly.FromTimeSpan(v));
+        
+        builder.Entity<SharedAreaReservation>().Property(sr => sr.EndTime)
+            .HasConversion(v => v.ToTimeSpan(), v => TimeOnly.FromTimeSpan(v));
+        
+        builder.Entity<SharedAreaReservation>().Property(sr => sr.StartTime).IsRequired();
+        builder.Entity<SharedAreaReservation>().Property(sr => sr.EndTime).IsRequired();        
+        builder.Entity<SharedAreaReservation>().Property(sr => sr.Reason).IsRequired();     
+        builder.Entity<SharedAreaReservation>().Property(sr => sr.CreatedAt).IsRequired();      
+        builder.Entity<SharedAreaReservation>()
+            .HasOne(sr => sr.SharedArea)
+            .WithMany()
+            .HasForeignKey(sr => sr.SharedAreaId)
+            .OnDelete(DeleteBehavior.Cascade);
+        
+        builder.Entity<SharedAreaReservation>()
+            .HasIndex(sr => new { sr.SharedAreaId, sr.ReservationDate, sr.StartTime });
+
+
+
         // ── Reservation Scheduling ───────────────────────────────────────────────
 
         builder.Entity<Meeting>().HasKey(m => m.Id);

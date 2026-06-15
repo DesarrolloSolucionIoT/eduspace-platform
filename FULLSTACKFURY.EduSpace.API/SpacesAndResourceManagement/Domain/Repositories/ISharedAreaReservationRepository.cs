@@ -26,7 +26,7 @@ public interface ISharedAreaReservationRepository : IBaseRepository<SharedAreaRe
     /// <param name="sharedAreaId">The shared area identifier.</param>
     /// <param name="date">The date of the reservation.</param>
     /// <returns>A result containing a collection of reservations for the specified shared area and date.</returns>
-    Task<IEnumerable<SharedAreaReservation>> FindBySharedIdAndDateAsync(int sharedAreaId
+    Task<IEnumerable<SharedAreaReservation>> FindBySharedAreaIdAndDateAsync(int sharedAreaId
     , DateOnly date);
 
     /// <summary>
