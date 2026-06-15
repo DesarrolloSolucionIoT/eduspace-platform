@@ -2,6 +2,9 @@ using System.ComponentModel.DataAnnotations;
 
 namespace FULLSTACKFURY.EduSpace.API.SpacesAndResourceManagement.Domain.Model.Aggregates;
 
+/// <summary>
+/// Represents a reservation for a shared area, including details such as the reserved area, teacher, date, time, and reason for the reservation.
+/// </summary>
 public class SharedAreaReservation
 {
     [Key] public int Id { get; private set; }

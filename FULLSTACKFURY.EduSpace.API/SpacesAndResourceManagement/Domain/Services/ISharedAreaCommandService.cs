@@ -21,4 +21,12 @@ public interface ISharedAreaCommandService
 
     Task Handle(DeleteSharedAreaCommand command);
     Task<SharedArea?> Handle(UpdateSharedAreaCommand command);
+
+    /// <summary>
+    ///    Handles the reserve shared area command.
+    /// </summary>
+    /// <param name="command"></param>
+    /// <returns></returns>
+    Task<SharedAreaReservation?> Handle(ReserveSharedAreaCommand command);
+
 }
