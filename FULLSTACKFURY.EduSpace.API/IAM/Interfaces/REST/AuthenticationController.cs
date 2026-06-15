@@ -120,6 +120,67 @@ public class AuthenticationController(
     }
 
     [AllowAnonymous]
+    [HttpPost("forgot-password")]
+    [SwaggerOperation(
+        Summary = "Forgot password",
+        Description = "Requests a password-reset link. Always returns 200 OK regardless of whether the email exists (anti-enumeration).",
+        OperationId = "ForgotPassword",
+        Tags = new[] { "Authentication" })]
+    [SwaggerResponse(StatusCodes.Status200OK, "If the email exists, a reset link was sent.")]
+    public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordResource resource)
+    {
+        var command = RequestPasswordResetCommandFromResourceAssembler.ToCommandFromResource(resource);
+        await accountCommandService.Handle(command);
+        return Ok(new
+        {
+            message = "Si existe una cuenta con ese correo, te enviamos un enlace para restablecer tu contraseña."
+        });
+    }
+
+    [AllowAnonymous]
+    [HttpPost("reset-password")]
+    [SwaggerOperation(
+        Summary = "Reset password",
+        Description = "Validates the password-reset token and updates the account password.",
+        OperationId = "ResetPassword",
+        Tags = new[] { "Authentication" })]
+    [SwaggerResponse(StatusCodes.Status200OK, "Password reset successfully.")]
+    [SwaggerResponse(StatusCodes.Status400BadRequest, "Invalid, expired, or already-used token.")]
+    public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordResource resource)
+    {
+        try
+        {
+            var command = ResetPasswordCommandFromResourceAssembler.ToCommandFromResource(resource);
+            await accountCommandService.Handle(command);
+            return Ok(new { message = "Tu contraseña fue restablecida correctamente." });
+        }
+        catch (InvalidPasswordResetTokenException)
+        {
+            return BadRequest(new
+            {
+                code = "InvalidPasswordResetToken",
+                message = "El enlace de recuperación no es válido."
+            });
+        }
+        catch (PasswordResetTokenExpiredException)
+        {
+            return BadRequest(new
+            {
+                code = "PasswordResetTokenExpired",
+                message = "El enlace de recuperación expiró. Pedí uno nuevo."
+            });
+        }
+        catch (PasswordResetTokenAlreadyUsedException)
+        {
+            return BadRequest(new
+            {
+                code = "PasswordResetTokenAlreadyUsed",
+                message = "Este enlace de recuperación ya fue usado."
+            });
+        }
+    }
+
+    [AllowAnonymous]
     [HttpPost("refresh")]
     [SwaggerOperation(
         Summary = "Refresh Access Token",
