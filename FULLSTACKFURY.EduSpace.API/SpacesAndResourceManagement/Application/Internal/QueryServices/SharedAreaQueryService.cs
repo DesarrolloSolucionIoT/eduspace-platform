@@ -11,7 +11,7 @@ namespace FULLSTACKFURY.EduSpace.API.SpacesAndResourceManagement.Application.Int
 /// <param name="classroomRepository">
 ///     The classroom repository
 /// </param>
-public class SharedAreaQueryService(ISharedAreaRepository sharedAreaRepository) : ISharedAreaQueryService
+public class SharedAreaQueryService(ISharedAreaRepository sharedAreaRepository, ISharedAreaReservationRepository sharedAreaReservationRepository) : ISharedAreaQueryService
 {
     /// <Inheritdoc />
     public async Task<SharedArea?> Handle(GetSharedAreaByIdQuery query)
@@ -23,5 +23,15 @@ public class SharedAreaQueryService(ISharedAreaRepository sharedAreaRepository) 
     public async Task<IEnumerable<SharedArea>> Handle(GetAllSharedAreasQuery query)
     {
         return await sharedAreaRepository.ListAsync();
+    }
+
+    public async Task<IEnumerable<SharedAreaReservation>> Handle(GetAllReservationsBySharedAreaIdQuery query)
+    {
+        return await sharedAreaReservationRepository.FindBySharedAreaIdAndDateAsync(query.SharedAreaId, query.Date);
+    }
+
+    public async Task<IEnumerable<SharedAreaReservation>> Handle(GetAllReservationsByTeacherIdQuery query)
+    {
+        return await sharedAreaReservationRepository.FindByTeacherIdAsync(query.TeacherId);
     }
 }
