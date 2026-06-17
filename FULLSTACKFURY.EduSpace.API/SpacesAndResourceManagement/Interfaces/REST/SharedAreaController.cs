@@ -102,25 +102,25 @@ public class SharedAreaController(
 
     // ── Reservation endpoints ───────────────────────────────────────────────
 
-    [HttpPost("{id:int}/reserve")]
+    [HttpPost("{sharedAreaId:int}/reserve")]
     [SwaggerOperation(Summary = "Reserve a shared area", OperationId = "ReserveSharedArea")]
     [SwaggerResponse(StatusCodes.Status201Created, "The reservation was created successfully",
         typeof(SharedAreaReservationResource))]
     [SwaggerResponse(StatusCodes.Status400BadRequest, "The reservation could not be created")]
     [SwaggerResponse(StatusCodes.Status404NotFound, "Shared area not found")]
     [SwaggerResponse(StatusCodes.Status409Conflict, "Time slot already reserved")]
-    public async Task<IActionResult> ReserveSharedArea([FromRoute] int id,
+    public async Task<IActionResult> ReserveSharedArea([FromRoute] int sharedAreaId,
         [FromBody] ReserveSharedAreaResource resource)
     {
         try
         {
-            var command = ReserveSharedAreaCommandFromResourceAssembler.ToCommandFromResource(id, resource);
+            var command = ReserveSharedAreaCommandFromResourceAssembler.ToCommandFromResource(sharedAreaId, resource);
             var reservation = await sharedAreaCommandService.Handle(command);
             if (reservation is null) return BadRequest();
             var reservationResource =
                 SharedAreaReservationResourceFromEntityAssembler.ToResourceFromEntity(reservation);
             return CreatedAtAction(nameof(GetReservationsBySharedAreaId),
-                new { sharedAreaId = id }, reservationResource);
+                new { id = sharedAreaId }, reservationResource);
         }
         catch (SharedAreaNotFoundException ex)
         {
