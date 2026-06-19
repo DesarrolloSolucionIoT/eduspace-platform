@@ -4,5 +4,6 @@ public record UpdateClassroomCommand(
     int ClassroomId,
     string Name,
     string Description,
-    int TeacherId
+    int TeacherId,
+    string? ZoneId = null
 );

@@ -11,7 +11,8 @@ public static class UpdateClassroomCommandFromResourceAssembler
             resource.Id,
             resource.Name,
             resource.Description,
-            resource.TeacherId
+            resource.TeacherId,
+            resource.ZoneId
         );
     }
 }

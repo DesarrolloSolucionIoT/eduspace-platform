@@ -6,5 +6,6 @@ public record UpdateClassroomResource(
     int Id,
     [Required, StringLength(100)] string Name,
     [Required, StringLength(500)] string Description,
-    [Range(1, int.MaxValue)] int TeacherId
+    [Range(1, int.MaxValue)] int TeacherId,
+    [StringLength(64)] string? ZoneId = null
 );

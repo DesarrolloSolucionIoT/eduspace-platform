@@ -2,6 +2,7 @@ using EntityFrameworkCore.CreatedUpdatedDate.Extensions;
 using FULLSTACKFURY.EduSpace.API.BreakdownManagement.Domain.Model.Aggregates;
 using FULLSTACKFURY.EduSpace.API.BreakdownManagement.Domain.Model.ValueObjects;
 using FULLSTACKFURY.EduSpace.API.IAM.Domain.Model.Aggregates;
+using FULLSTACKFURY.EduSpace.API.IoTMonitoring.Domain.Model.Aggregates;
 using FULLSTACKFURY.EduSpace.API.Profiles.Domain.Model.Aggregates;
 using FULLSTACKFURY.EduSpace.API.ReservationScheduling.Domain.Model.Aggregates;
 using FULLSTACKFURY.EduSpace.API.ReservationScheduling.Domain.Model.Entities;
@@ -116,6 +117,7 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
                 ti.WithOwner().HasForeignKey("Id");
                 ti.Property(r => r.TeacherIdentifier).HasColumnName("TeacherId");
             });
+        builder.Entity<Classroom>().Property(c => c.ZoneId).IsRequired(false).HasMaxLength(64);
         // Unique classroom name to prevent duplicates
         builder.Entity<Classroom>().HasIndex(c => c.Name).IsUnique();
 
@@ -220,6 +222,23 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
         // Unique index prevents double-booking the same teacher in overlapping sessions.
         builder.Entity<MeetingSession>()
             .HasIndex(ms => new { ms.TeacherId, ms.MeetingId });
+
+        // ── IoT Monitoring ───────────────────────────────────────────────────────
+
+        builder.Entity<SensorReading>().HasKey(sr => sr.Id);
+        builder.Entity<SensorReading>().Property(sr => sr.Id).IsRequired().ValueGeneratedOnAdd();
+        builder.Entity<SensorReading>().Property(sr => sr.EdgeReadingId).IsRequired().HasMaxLength(64);
+        builder.Entity<SensorReading>().HasIndex(sr => sr.EdgeReadingId).IsUnique();
+        builder.Entity<SensorReading>().Property(sr => sr.DeviceId).IsRequired().HasMaxLength(64);
+        builder.Entity<SensorReading>().HasIndex(sr => sr.DeviceId);
+        builder.Entity<SensorReading>().Property(sr => sr.ZoneId).IsRequired().HasMaxLength(64);
+        builder.Entity<SensorReading>().HasIndex(sr => sr.ZoneId);
+        builder.Entity<SensorReading>().Property(sr => sr.Temperature).IsRequired();
+        builder.Entity<SensorReading>().Property(sr => sr.Humidity).IsRequired();
+        builder.Entity<SensorReading>().Property(sr => sr.OccupancyPresent).IsRequired();
+        builder.Entity<SensorReading>().Property(sr => sr.AlertLedState).IsRequired();
+        builder.Entity<SensorReading>().Property(sr => sr.RecordedAt).IsRequired();
+        builder.Entity<SensorReading>().Property(sr => sr.ReceivedAt).IsRequired();
 
         // ── Breakdown Management ─────────────────────────────────────────────────
 

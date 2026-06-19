@@ -43,6 +43,11 @@ using FULLSTACKFURY.EduSpace.API.SpacesAndResourceManagement.Domain.Services;
 using FULLSTACKFURY.EduSpace.API.SpacesAndResourceManagement.Infrastructure.Persistence.EFC.Repositories;
 using FULLSTACKFURY.EduSpace.API.SpacesAndResourceManagement.Interfaces.ACL;
 using FULLSTACKFURY.EduSpace.API.SpacesAndResourceManagement.Interfaces.ACL.Services;
+using FULLSTACKFURY.EduSpace.API.IoTMonitoring.Application.Internal.CommandServices;
+using FULLSTACKFURY.EduSpace.API.IoTMonitoring.Application.Internal.QueryServices;
+using FULLSTACKFURY.EduSpace.API.IoTMonitoring.Domain.Repositories;
+using FULLSTACKFURY.EduSpace.API.IoTMonitoring.Domain.Services;
+using FULLSTACKFURY.EduSpace.API.IoTMonitoring.Infrastructure.Persistence.EFC.Repositories;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -158,6 +163,11 @@ builder.Services.AddScoped<IActivationTokenRepository, ActivationTokenRepository
 builder.Services.AddScoped<IReportRepository, ReportRepository>();
 builder.Services.AddScoped<IReportCommandService, ReportCommandService>();
 builder.Services.AddScoped<IReportQueryService, ReportQueryService>();
+
+// IoT Monitoring BC
+builder.Services.AddScoped<ISensorReadingRepository, SensorReadingRepository>();
+builder.Services.AddScoped<ISensorReadingCommandService, SensorReadingCommandService>();
+builder.Services.AddScoped<ISensorReadingQueryService, SensorReadingQueryService>();
 
 // BreakdownManagement BC — ACL outbound services
 builder.Services.AddScoped<BrkOutbound.IExternalProfileService, BrkOutbound.ExternalProfileServices>();

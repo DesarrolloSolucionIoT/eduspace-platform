@@ -16,10 +16,11 @@ public class Classroom
         Name = string.Empty;
         Description = string.Empty;
         TeacherId = default!;
+        ZoneId = null;
     }
 
     /// <summary>Primary constructor for new classrooms.</summary>
-    public Classroom(string name, string description, int teacherId) : this()
+    public Classroom(string name, string description, int teacherId, string? zoneId = null) : this()
     {
         ValidateName(name);
         ValidateDescription(description);
@@ -27,16 +28,20 @@ public class Classroom
         Name = name;
         Description = description;
         TeacherId = new TeacherId(teacherId);
+        ZoneId = zoneId;
     }
 
     /// <summary>Constructor used when creating from a <see cref="CreateClassroomCommand" />.</summary>
     public Classroom(CreateClassroomCommand command)
-        : this(command.Name, command.Description, command.TeacherId) { }
+        : this(command.Name, command.Description, command.TeacherId, command.ZoneId) { }
 
     [Key] public int Id { get; private set; }
 
     public string Name { get; private set; }
     public string Description { get; private set; }
+
+    /// <summary>Optional link to the Edge device zone (e.g. "aula-101"). Null means no IoT device configured.</summary>
+    public string? ZoneId { get; private set; }
 
     public TeacherId TeacherId { get; private set; }
 
@@ -47,7 +52,7 @@ public class Classroom
     ///     verifying that <paramref name="teacherId" /> resolves to a valid teacher BEFORE
     ///     calling this method.
     /// </summary>
-    public void Update(string name, string description, int teacherId)
+    public void Update(string name, string description, int teacherId, string? zoneId = null)
     {
         ValidateName(name);
         ValidateDescription(description);
@@ -55,6 +60,7 @@ public class Classroom
         Name = name;
         Description = description;
         TeacherId = new TeacherId(teacherId);
+        ZoneId = zoneId;
     }
 
     // ── private invariant guards ──────────────────────────────────────────────
