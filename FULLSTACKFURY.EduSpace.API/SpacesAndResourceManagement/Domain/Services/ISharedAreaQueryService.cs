@@ -29,4 +29,8 @@ public interface ISharedAreaQueryService
     ///     A collection of all shared area in the platform.
     /// </returns>
     Task<IEnumerable<SharedArea>> Handle(GetAllSharedAreasQuery query);
+
+    Task<IEnumerable<SharedAreaReservation>> Handle(GetAllReservationsBySharedAreaIdQuery query);
+
+    Task<IEnumerable<SharedAreaReservation>> Handle(GetAllReservationsByTeacherIdQuery query);
 }

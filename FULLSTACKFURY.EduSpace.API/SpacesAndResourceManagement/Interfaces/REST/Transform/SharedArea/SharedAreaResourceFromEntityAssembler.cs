@@ -18,6 +18,6 @@ public class SharedAreaResourceFromEntityAssembler
     /// </returns>
     public static SharedAreaResource ToResourceFromEntity(Domain.Model.Aggregates.SharedArea entity)
     {
-        return new SharedAreaResource(entity.Id, entity.Name, entity.Capacity, entity.Description);
+        return new SharedAreaResource(entity.Id, entity.Name, entity.Capacity, entity.Description, entity.ZoneId);
     }
 }

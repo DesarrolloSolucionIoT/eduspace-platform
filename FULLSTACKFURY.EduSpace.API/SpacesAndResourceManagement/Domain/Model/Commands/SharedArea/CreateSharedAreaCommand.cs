@@ -12,4 +12,4 @@
 /// <param name="Description">
 ///     The description of the shared area to create.
 /// </param>
-public record CreateSharedAreaCommand(string Name, int Capacity, string Description);
+public record CreateSharedAreaCommand(string Name, int Capacity, string Description, string? ZoneId = null);

@@ -9,5 +9,7 @@ public interface ISensorReadingRepository : IBaseRepository<SensorReading>
     Task<IEnumerable<SensorReading>> FindAllByDeviceIdAsync(string deviceId);
     Task<IEnumerable<SensorReading>> FindAllByZoneIdAsync(string zoneId);
     Task<SensorReading?> FindLatestByZoneIdAsync(string zoneId);
-    Task<bool> ExistsByEdgeReadingIdAsync(string edgeReadingId);
+    // Idempotency key: a reading is uniquely identified by its edge node + edge-local id.
+    // reading_id is only unique within one edge, so device_id is part of the key.
+    Task<bool> ExistsByDeviceIdAndEdgeReadingIdAsync(string deviceId, int edgeReadingId);
 }

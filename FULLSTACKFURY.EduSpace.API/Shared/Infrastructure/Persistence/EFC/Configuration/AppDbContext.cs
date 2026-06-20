@@ -152,6 +152,40 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
         builder.Entity<SharedArea>().Property(sa => sa.Name).IsRequired();
         builder.Entity<SharedArea>().Property(sa => sa.Capacity).IsRequired();
         builder.Entity<SharedArea>().Property(sa => sa.Description).IsRequired();
+        builder.Entity<SharedArea>().Property(sa => sa.ZoneId).IsRequired(false).HasMaxLength(64);
+
+        // Reserve a shared space
+        
+        builder.Entity<SharedAreaReservation>().HasKey(sr => sr.Id);
+        builder.Entity<SharedAreaReservation>().Property(sr => sr.Id).IsRequired().ValueGeneratedOnAdd();
+        builder.Entity<SharedAreaReservation>().Property(sr => sr.SharedAreaId).IsRequired();
+        builder.Entity<SharedAreaReservation>().Property(sr => sr.TeacherId).IsRequired();
+        builder.Entity<SharedAreaReservation>().Property(sr => sr.ReservationDate).IsRequired();
+        builder.Entity<SharedAreaReservation>().Property(sr => sr.ReservationDate)
+            .HasConversion(v => v.ToDateTime(TimeOnly.MinValue),
+                v => DateOnly.FromDateTime(v));
+
+        builder.Entity<SharedAreaReservation>().Property(sr => sr.StartTime)
+            .HasConversion(v => v.ToTimeSpan(), v => TimeOnly.FromTimeSpan(v));
+        
+        builder.Entity<SharedAreaReservation>().Property(sr => sr.EndTime)
+            .HasConversion(v => v.ToTimeSpan(), v => TimeOnly.FromTimeSpan(v));
+        
+        builder.Entity<SharedAreaReservation>().Property(sr => sr.StartTime).IsRequired();
+        builder.Entity<SharedAreaReservation>().Property(sr => sr.EndTime).IsRequired();        
+        builder.Entity<SharedAreaReservation>().Property(sr => sr.Reason).IsRequired();     
+        builder.Entity<SharedAreaReservation>().Property(sr => sr.CreatedAt).IsRequired();      
+        builder.Entity<SharedAreaReservation>()
+            .HasOne(sr => sr.SharedArea)
+            .WithMany()
+            .HasForeignKey(sr => sr.SharedAreaId)
+            .OnDelete(DeleteBehavior.Cascade);
+        
+        builder.Entity<SharedAreaReservation>()
+            .HasIndex(sr => new { sr.SharedAreaId, sr.ReservationDate, sr.StartTime })
+            .HasDatabaseName("ix_shared_area_res_sa_id_date_start");
+
+
 
         // ── Reservation Scheduling ───────────────────────────────────────────────
 
@@ -211,12 +245,16 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
 
         builder.Entity<SensorReading>().HasKey(sr => sr.Id);
         builder.Entity<SensorReading>().Property(sr => sr.Id).IsRequired().ValueGeneratedOnAdd();
-        builder.Entity<SensorReading>().Property(sr => sr.EdgeReadingId).IsRequired().HasMaxLength(64);
-        builder.Entity<SensorReading>().HasIndex(sr => sr.EdgeReadingId).IsUnique();
+        builder.Entity<SensorReading>().Property(sr => sr.EdgeReadingId).IsRequired();
         builder.Entity<SensorReading>().Property(sr => sr.DeviceId).IsRequired().HasMaxLength(64);
-        builder.Entity<SensorReading>().HasIndex(sr => sr.DeviceId);
-        builder.Entity<SensorReading>().Property(sr => sr.ZoneId).IsRequired().HasMaxLength(64);
+        builder.Entity<SensorReading>().Property(sr => sr.ZoneId).IsRequired(false).HasMaxLength(64);
         builder.Entity<SensorReading>().HasIndex(sr => sr.ZoneId);
+        // Idempotency: one row per (device, edge reading id). reading_id is only unique per edge node,
+        // so the device is part of the key. Also serves queries filtering by device_id (leftmost prefix).
+        builder.Entity<SensorReading>()
+            .HasIndex(sr => new { sr.DeviceId, sr.EdgeReadingId })
+            .IsUnique()
+            .HasDatabaseName("ix_sensor_readings_device_edge_reading");
         builder.Entity<SensorReading>().Property(sr => sr.Temperature).IsRequired();
         builder.Entity<SensorReading>().Property(sr => sr.Humidity).IsRequired();
         builder.Entity<SensorReading>().Property(sr => sr.OccupancyPresent).IsRequired();

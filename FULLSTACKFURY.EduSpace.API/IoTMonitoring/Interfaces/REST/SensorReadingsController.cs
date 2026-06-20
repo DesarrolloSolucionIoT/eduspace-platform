@@ -1,6 +1,7 @@
 using System.Net.Mime;
 using FULLSTACKFURY.EduSpace.API.IoTMonitoring.Domain.Model.Queries;
 using FULLSTACKFURY.EduSpace.API.IoTMonitoring.Domain.Services;
+using FULLSTACKFURY.EduSpace.API.IoTMonitoring.Interfaces.REST.Filters;
 using FULLSTACKFURY.EduSpace.API.IoTMonitoring.Interfaces.REST.Resources;
 using FULLSTACKFURY.EduSpace.API.IoTMonitoring.Interfaces.REST.Transform;
 using Microsoft.AspNetCore.Authorization;
@@ -10,7 +11,7 @@ using Swashbuckle.AspNetCore.Annotations;
 namespace FULLSTACKFURY.EduSpace.API.IoTMonitoring.Interfaces.REST;
 
 [ApiController]
-[Route("api/v1/[controller]")]
+[Route("api/v1/iot-monitoring/sensor-readings")]
 [Produces(MediaTypeNames.Application.Json)]
 public class SensorReadingsController(
     ISensorReadingCommandService commandService,
@@ -22,8 +23,9 @@ public class SensorReadingsController(
     /// Internal endpoint consumed by the Edge API forwarder (no JWT required).
     /// Receives the exact payload the Flask upstream_forwarder.py sends.
     /// </summary>
-    [HttpPost("ingest")]
+    [HttpPost]
     [AllowAnonymous]
+    [ServiceFilter(typeof(EdgeApiKeyFilter))]
     [SwaggerOperation(
         Summary = "Ingest a sensor reading from the Edge API",
         Description = "Receives a forwarded sensor reading from the ESP32 Edge gateway. Idempotent: duplicate edge reading IDs are silently ignored.",

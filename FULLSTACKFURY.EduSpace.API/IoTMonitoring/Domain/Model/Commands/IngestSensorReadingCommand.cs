@@ -1,9 +1,9 @@
 namespace FULLSTACKFURY.EduSpace.API.IoTMonitoring.Domain.Model.Commands;
 
 public record IngestSensorReadingCommand(
-    string EdgeReadingId,
+    int EdgeReadingId,
     string DeviceId,
-    string ZoneId,
+    string? ZoneId,
     float Temperature,
     float Humidity,
     bool OccupancyPresent,

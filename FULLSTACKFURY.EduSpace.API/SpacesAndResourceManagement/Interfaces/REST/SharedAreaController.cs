@@ -2,6 +2,7 @@ using System.Net.Mime;
 using FULLSTACKFURY.EduSpace.API.SpacesAndResourceManagement.Domain.Model.Commands.SharedArea;
 using FULLSTACKFURY.EduSpace.API.SpacesAndResourceManagement.Domain.Model.Exceptions;
 using FULLSTACKFURY.EduSpace.API.SpacesAndResourceManagement.Domain.Model.Queries;
+using FULLSTACKFURY.EduSpace.API.SpacesAndResourceManagement.Domain.Repositories;
 using FULLSTACKFURY.EduSpace.API.SpacesAndResourceManagement.Domain.Services;
 using FULLSTACKFURY.EduSpace.API.SpacesAndResourceManagement.Interfaces.REST.Resources.SharedArea;
 using FULLSTACKFURY.EduSpace.API.SpacesAndResourceManagement.Interfaces.REST.Transform.SharedArea;
@@ -18,7 +19,8 @@ namespace FULLSTACKFURY.EduSpace.API.SpacesAndResourceManagement.Interfaces.REST
 [SwaggerTag("Available Shared Areas Endpoints")]
 public class SharedAreaController(
     ISharedAreaQueryService sharedAreaQueryService,
-    ISharedAreaCommandService sharedAreaCommandService) : ControllerBase
+    ISharedAreaCommandService sharedAreaCommandService
+    ) : ControllerBase
 {
     [HttpGet("{id:int}")]
     [SwaggerOperation(Summary = "Get a shared area by id", OperationId = "GetSharedAreaById")]
@@ -96,5 +98,62 @@ public class SharedAreaController(
         {
             return NotFound(new { ex.Message });
         }
+    }
+
+    // ── Reservation endpoints ───────────────────────────────────────────────
+
+    [HttpPost("{sharedAreaId:int}/reserve")]
+    [SwaggerOperation(Summary = "Reserve a shared area", OperationId = "ReserveSharedArea")]
+    [SwaggerResponse(StatusCodes.Status201Created, "The reservation was created successfully",
+        typeof(SharedAreaReservationResource))]
+    [SwaggerResponse(StatusCodes.Status400BadRequest, "The reservation could not be created")]
+    [SwaggerResponse(StatusCodes.Status404NotFound, "Shared area not found")]
+    [SwaggerResponse(StatusCodes.Status409Conflict, "Time slot already reserved")]
+    public async Task<IActionResult> ReserveSharedArea([FromRoute] int sharedAreaId,
+        [FromBody] ReserveSharedAreaResource resource)
+    {
+        try
+        {
+            var command = ReserveSharedAreaCommandFromResourceAssembler.ToCommandFromResource(sharedAreaId, resource);
+            var reservation = await sharedAreaCommandService.Handle(command);
+            if (reservation is null) return BadRequest();
+            var reservationResource =
+                SharedAreaReservationResourceFromEntityAssembler.ToResourceFromEntity(reservation);
+            return CreatedAtAction(nameof(GetReservationsBySharedAreaId),
+                new { id = sharedAreaId }, reservationResource);
+        }
+        catch (SharedAreaNotFoundException ex)
+        {
+            return NotFound(new { ex.Message });
+        }
+        catch (SharedAreaReservationConflictException ex)
+        {
+            return Conflict(new { ex.Message });
+        }
+    }
+
+    [HttpGet("{id:int}/reservations")]
+    [SwaggerOperation(Summary = "Get reservations for a shared area", OperationId = "GetReservationsBySharedAreaId")]
+    [SwaggerResponse(StatusCodes.Status200OK, "The reservations were retrieved successfully",
+        typeof(IEnumerable<SharedAreaReservationResource>))]
+    public async Task<IActionResult> GetReservationsBySharedAreaId([FromRoute] int id, [FromQuery] DateTime date)
+    {
+        var query = new GetAllReservationsBySharedAreaIdQuery(id, DateOnly.FromDateTime(date));
+        
+        var reservations = await sharedAreaQueryService.Handle(query);
+
+        return Ok(reservations.Select(SharedAreaReservationResourceFromEntityAssembler.ToResourceFromEntity));
+
+    }
+
+    [HttpGet("teacher/{teacherId:int}/reservations")]
+    [SwaggerOperation(Summary = "Get reservations for a teacher", OperationId = "GetReservationsByTeacherId")]
+    [SwaggerResponse(StatusCodes.Status200OK, "The reservations were retrieved successfully",
+        typeof(IEnumerable<SharedAreaReservationResource>))]
+    public async Task<IActionResult> GetReservationsByTeacherId([FromRoute] int teacherId)
+    {
+        var query = new GetAllReservationsByTeacherIdQuery(teacherId);
+        var reservations = await sharedAreaQueryService.Handle(query);
+        return Ok(reservations.Select(SharedAreaReservationResourceFromEntityAssembler.ToResourceFromEntity));
     }
 }

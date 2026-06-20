@@ -6,5 +6,6 @@ namespace FULLSTACKFURY.EduSpace.API.SpacesAndResourceManagement.Interfaces.REST
 public record CreateSharedAreaResource(
     [Required] string Name,
     [Range(1, 1000)] int Capacity,
-    [Required] string Description
+    [Required] string Description,
+    [StringLength(64)] string? ZoneId = null
 );

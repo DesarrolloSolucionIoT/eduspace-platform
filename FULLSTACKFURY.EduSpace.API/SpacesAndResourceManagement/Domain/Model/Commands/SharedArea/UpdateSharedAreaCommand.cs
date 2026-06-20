@@ -4,5 +4,6 @@ public record UpdateSharedAreaCommand(
     int Id,
     string Name,
     int Capacity,
-    string Description
+    string Description,
+    string? ZoneId = null
 );
