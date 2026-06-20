@@ -11,12 +11,14 @@ namespace FULLSTACKFURY.EduSpace.API.Tests.SpacesAndResourceManagement.Applicati
 public class SharedAreaQueryServiceTests
 {
     private readonly ISharedAreaRepository _sharedAreaRepository;
+    private readonly ISharedAreaReservationRepository _sharedAreaReservationRepository;
     private readonly SharedAreaQueryService _sut;
 
     public SharedAreaQueryServiceTests()
     {
         _sharedAreaRepository = Substitute.For<ISharedAreaRepository>();
-        _sut = new SharedAreaQueryService(_sharedAreaRepository);
+        _sharedAreaReservationRepository = Substitute.For<ISharedAreaReservationRepository>();
+        _sut = new SharedAreaQueryService(_sharedAreaRepository, _sharedAreaReservationRepository);
     }
 
     // ── Handle(GetSharedAreaByIdQuery) ───────────────────────────────────────────
