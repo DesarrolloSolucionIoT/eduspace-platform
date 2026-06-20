@@ -48,6 +48,7 @@ using FULLSTACKFURY.EduSpace.API.IoTMonitoring.Application.Internal.QueryService
 using FULLSTACKFURY.EduSpace.API.IoTMonitoring.Domain.Repositories;
 using FULLSTACKFURY.EduSpace.API.IoTMonitoring.Domain.Services;
 using FULLSTACKFURY.EduSpace.API.IoTMonitoring.Infrastructure.Persistence.EFC.Repositories;
+using FULLSTACKFURY.EduSpace.API.IoTMonitoring.Interfaces.REST.Filters;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -87,7 +88,7 @@ builder.Services.AddSwaggerGen(c =>
             Title = "FullStackFury.EduSpacePlatform.API",
             Version = "v1",
             Description = "Eduspace Platform API",
-            TermsOfService = new Uri("https://acme-learning.com/tos"),
+            TermsOfService = new Uri("https://github.com/DesarrolloSolucionIoT"),
             Contact = new OpenApiContact
             {
                 Name = "Eduspace",
@@ -168,6 +169,7 @@ builder.Services.AddScoped<IReportQueryService, ReportQueryService>();
 builder.Services.AddScoped<ISensorReadingRepository, SensorReadingRepository>();
 builder.Services.AddScoped<ISensorReadingCommandService, SensorReadingCommandService>();
 builder.Services.AddScoped<ISensorReadingQueryService, SensorReadingQueryService>();
+builder.Services.AddScoped<EdgeApiKeyFilter>();
 
 // BreakdownManagement BC — ACL outbound services
 builder.Services.AddScoped<BrkOutbound.IExternalProfileService, BrkOutbound.ExternalProfileServices>();
