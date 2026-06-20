@@ -1,0 +1,31 @@
+name: CI
+
+# Compile the backend and run the full test suite on every push and PR.
+# This is what surfaces a green/red check on each commit in GitHub.
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Restore dependencies
+        run: dotnet restore eduspace-platform.sln
+
+      - name: Build (Release)
+        run: dotnet build eduspace-platform.sln -c Release --no-restore
+
+      - name: Test
+        run: dotnet test eduspace-platform.sln -c Release --no-build --verbosity normal
