@@ -3,6 +3,7 @@ using System;
 using FULLSTACKFURY.EduSpace.API.Shared.Infrastructure.Persistence.EFC.Configuration;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FULLSTACKFURY.EduSpace.API.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260615200841_AddPasswordResetTokens")]
+    partial class AddPasswordResetTokens
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -212,65 +215,6 @@ namespace FULLSTACKFURY.EduSpace.API.Migrations
                     b.ToTable("refresh_tokens");
                 });
 
-            modelBuilder.Entity("FULLSTACKFURY.EduSpace.API.IoTMonitoring.Domain.Model.Aggregates.SensorReading", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasColumnName("id");
-
-                    b.Property<int>("AlertLedState")
-                        .HasColumnType("int")
-                        .HasColumnName("alert_led_state");
-
-                    b.Property<string>("DeviceId")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("varchar(64)")
-                        .HasColumnName("device_id");
-
-                    b.Property<int>("EdgeReadingId")
-                        .HasColumnType("int")
-                        .HasColumnName("edge_reading_id");
-
-                    b.Property<float>("Humidity")
-                        .HasColumnType("float")
-                        .HasColumnName("humidity");
-
-                    b.Property<bool>("OccupancyPresent")
-                        .HasColumnType("tinyint(1)")
-                        .HasColumnName("occupancy_present");
-
-                    b.Property<DateTime>("ReceivedAt")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("received_at");
-
-                    b.Property<DateTime>("RecordedAt")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("recorded_at");
-
-                    b.Property<float>("Temperature")
-                        .HasColumnType("float")
-                        .HasColumnName("temperature");
-
-                    b.Property<string>("ZoneId")
-                        .HasMaxLength(64)
-                        .HasColumnType("varchar(64)")
-                        .HasColumnName("zone_id");
-
-                    b.HasKey("Id")
-                        .HasName("p_k_sensor_readings");
-
-                    b.HasIndex("ZoneId")
-                        .HasDatabaseName("i_x_sensor_readings_zone_id");
-
-                    b.HasIndex("DeviceId", "EdgeReadingId")
-                        .IsUnique()
-                        .HasDatabaseName("ix_sensor_readings_device_edge_reading");
-
-                    b.ToTable("sensor_readings");
-                });
-
             modelBuilder.Entity("FULLSTACKFURY.EduSpace.API.Profiles.Domain.Model.Aggregates.AdminProfile", b =>
                 {
                     b.Property<int>("Id")
@@ -415,11 +359,6 @@ namespace FULLSTACKFURY.EduSpace.API.Migrations
                         .HasColumnType("varchar(255)")
                         .HasColumnName("name");
 
-                    b.Property<string>("ZoneId")
-                        .HasMaxLength(64)
-                        .HasColumnType("varchar(64)")
-                        .HasColumnName("zone_id");
-
                     b.HasKey("Id")
                         .HasName("p_k_classrooms");
 
@@ -482,60 +421,10 @@ namespace FULLSTACKFURY.EduSpace.API.Migrations
                         .HasColumnType("longtext")
                         .HasColumnName("name");
 
-                    b.Property<string>("ZoneId")
-                        .HasMaxLength(64)
-                        .HasColumnType("varchar(64)")
-                        .HasColumnName("zone_id");
-
                     b.HasKey("Id")
                         .HasName("p_k_shared_areas");
 
                     b.ToTable("shared_areas");
-                });
-
-            modelBuilder.Entity("FULLSTACKFURY.EduSpace.API.SpacesAndResourceManagement.Domain.Model.Aggregates.SharedAreaReservation", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasColumnName("id");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("created_at");
-
-                    b.Property<TimeSpan>("EndTime")
-                        .HasColumnType("time(6)")
-                        .HasColumnName("end_time");
-
-                    b.Property<string>("Reason")
-                        .IsRequired()
-                        .HasColumnType("longtext")
-                        .HasColumnName("reason");
-
-                    b.Property<DateTime>("ReservationDate")
-                        .HasColumnType("datetime(6)")
-                        .HasColumnName("reservation_date");
-
-                    b.Property<int>("SharedAreaId")
-                        .HasColumnType("int")
-                        .HasColumnName("shared_area_id");
-
-                    b.Property<TimeSpan>("StartTime")
-                        .HasColumnType("time(6)")
-                        .HasColumnName("start_time");
-
-                    b.Property<int>("TeacherId")
-                        .HasColumnType("int")
-                        .HasColumnName("teacher_id");
-
-                    b.HasKey("Id")
-                        .HasName("p_k_shared_area_reservations");
-
-                    b.HasIndex("SharedAreaId", "ReservationDate", "StartTime")
-                        .HasDatabaseName("ix_shared_area_res_sa_id_date_start");
-
-                    b.ToTable("shared_area_reservations");
                 });
 
             modelBuilder.Entity("FULLSTACKFURY.EduSpace.API.IAM.Domain.Model.Aggregates.ActivationToken", b =>
@@ -825,18 +714,6 @@ namespace FULLSTACKFURY.EduSpace.API.Migrations
                         .HasConstraintName("f_k_resources_classrooms_classroom_id");
 
                     b.Navigation("Classroom");
-                });
-
-            modelBuilder.Entity("FULLSTACKFURY.EduSpace.API.SpacesAndResourceManagement.Domain.Model.Aggregates.SharedAreaReservation", b =>
-                {
-                    b.HasOne("FULLSTACKFURY.EduSpace.API.SpacesAndResourceManagement.Domain.Model.Aggregates.SharedArea", "SharedArea")
-                        .WithMany()
-                        .HasForeignKey("SharedAreaId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("f_k_shared_area_reservations_shared_areas_shared_area_id");
-
-                    b.Navigation("SharedArea");
                 });
 
             modelBuilder.Entity("FULLSTACKFURY.EduSpace.API.ReservationScheduling.Domain.Model.Aggregates.Meeting", b =>

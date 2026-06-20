@@ -16,6 +16,7 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
 {
     public DbSet<RefreshToken> RefreshTokens { get; set; }
     public DbSet<ActivationToken> ActivationTokens { get; set; }
+    public DbSet<PasswordResetToken> PasswordResetTokens { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder builder)
     {
@@ -52,6 +53,21 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
 
         builder.Entity<ActivationToken>(e =>
         {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.AccountId).IsRequired();
+            e.Property(x => x.TokenHash).IsRequired().HasMaxLength(64);
+            e.HasIndex(x => x.TokenHash).IsUnique();
+            e.Property(x => x.ExpiresAt).IsRequired();
+            e.Property(x => x.UsedAt).IsRequired(false);
+            e.HasOne<Account>()
+                .WithMany()
+                .HasForeignKey(x => x.AccountId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        builder.Entity<PasswordResetToken>(e =>
+        {
+            e.ToTable("password_reset_tokens");
             e.HasKey(x => x.Id);
             e.Property(x => x.AccountId).IsRequired();
             e.Property(x => x.TokenHash).IsRequired().HasMaxLength(64);

@@ -18,6 +18,10 @@ public interface IAccountCommandService
 
     Task Handle(RequestAccountActivationCommand command);
 
+    Task Handle(RequestPasswordResetCommand command);
+
+    Task Handle(ResetPasswordCommand command);
+
     Task<(string newAccessToken, string newRefreshToken)> Handle(RefreshAccessTokenCommand command);
 
     Task Handle(LogoutCommand command);
