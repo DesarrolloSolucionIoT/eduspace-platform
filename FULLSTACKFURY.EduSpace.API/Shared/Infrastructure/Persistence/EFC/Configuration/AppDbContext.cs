@@ -136,6 +136,7 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
         builder.Entity<SharedArea>().Property(sa => sa.Name).IsRequired();
         builder.Entity<SharedArea>().Property(sa => sa.Capacity).IsRequired();
         builder.Entity<SharedArea>().Property(sa => sa.Description).IsRequired();
+        builder.Entity<SharedArea>().Property(sa => sa.ZoneId).IsRequired(false).HasMaxLength(64);
 
         // Reserve a shared space
         
