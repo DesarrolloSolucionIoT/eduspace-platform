@@ -59,9 +59,15 @@ public sealed class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logge
     public async ValueTask<bool> TryHandleAsync(HttpContext httpContext, Exception exception,
         CancellationToken cancellationToken)
     {
-        logger.LogError(exception, "Exception occurred: {Message}", exception.Message);
-
         var status = ResolveStatus(exception);
+
+        // Expected domain/client errors (4xx) are normal business outcomes, not bugs:
+        // log them at Warning without a stack trace. Only unexpected failures (5xx)
+        // warrant an error-level entry with the full exception.
+        if (status >= StatusCodes.Status500InternalServerError)
+            logger.LogError(exception, "Unhandled exception: {Message}", exception.Message);
+        else
+            logger.LogWarning("Request failed ({StatusCode}): {Message}", status, exception.Message);
 
         var problemDetails = new ProblemDetails
         {
