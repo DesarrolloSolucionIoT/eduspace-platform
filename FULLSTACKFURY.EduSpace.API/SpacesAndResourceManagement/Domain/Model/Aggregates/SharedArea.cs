@@ -16,10 +16,11 @@ public class SharedArea
     {
         Name = string.Empty;
         Description = string.Empty;
+        ZoneId = null;
     }
 
     /// <summary>Primary constructor for new shared areas.</summary>
-    public SharedArea(string name, int capacity, string description) : this()
+    public SharedArea(string name, int capacity, string description, string? zoneId = null) : this()
     {
         ValidateName(name);
         ValidateCapacity(capacity);
@@ -27,11 +28,12 @@ public class SharedArea
         Name = name;
         Capacity = capacity;
         Description = description;
+        ZoneId = zoneId;      
     }
 
     /// <summary>Constructor used when creating from a <see cref="CreateSharedAreaCommand" />.</summary>
     public SharedArea(CreateSharedAreaCommand command)
-        : this(command.Name, command.Capacity, command.Description) { }
+        : this(command.Name, command.Capacity, command.Description, command.ZoneId) { }
 
     [Key] public int Id { get; private set; }
     public string Name { get; private set; }
@@ -39,9 +41,14 @@ public class SharedArea
     public string Description { get; private set; }
 
     /// <summary>
+    /// Gets the zoneId to work with the IoT monitoring system.
+    /// </summary>
+    public string? ZoneId { get; private set; }
+
+    /// <summary>
     ///     Updates all mutable fields of the shared area.
     /// </summary>
-    public void Update(string name, int capacity, string description)
+    public void Update(string name, int capacity, string description, string? zoneId = null)
     {
         ValidateName(name);
         ValidateCapacity(capacity);
@@ -49,6 +56,7 @@ public class SharedArea
         Name = name;
         Capacity = capacity;
         Description = description;
+        ZoneId = zoneId;
     }
 
     public void UpdateName(string name)

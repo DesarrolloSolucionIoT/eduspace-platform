@@ -165,7 +165,8 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
             .OnDelete(DeleteBehavior.Cascade);
         
         builder.Entity<SharedAreaReservation>()
-            .HasIndex(sr => new { sr.SharedAreaId, sr.ReservationDate, sr.StartTime });
+            .HasIndex(sr => new { sr.SharedAreaId, sr.ReservationDate, sr.StartTime })
+            .HasDatabaseName("ix_shared_area_res_sa_id_date_start");
 
 
 
@@ -227,12 +228,16 @@ public class AppDbContext(DbContextOptions options) : DbContext(options)
 
         builder.Entity<SensorReading>().HasKey(sr => sr.Id);
         builder.Entity<SensorReading>().Property(sr => sr.Id).IsRequired().ValueGeneratedOnAdd();
-        builder.Entity<SensorReading>().Property(sr => sr.EdgeReadingId).IsRequired().HasMaxLength(64);
-        builder.Entity<SensorReading>().HasIndex(sr => sr.EdgeReadingId).IsUnique();
+        builder.Entity<SensorReading>().Property(sr => sr.EdgeReadingId).IsRequired();
         builder.Entity<SensorReading>().Property(sr => sr.DeviceId).IsRequired().HasMaxLength(64);
-        builder.Entity<SensorReading>().HasIndex(sr => sr.DeviceId);
-        builder.Entity<SensorReading>().Property(sr => sr.ZoneId).IsRequired().HasMaxLength(64);
+        builder.Entity<SensorReading>().Property(sr => sr.ZoneId).IsRequired(false).HasMaxLength(64);
         builder.Entity<SensorReading>().HasIndex(sr => sr.ZoneId);
+        // Idempotency: one row per (device, edge reading id). reading_id is only unique per edge node,
+        // so the device is part of the key. Also serves queries filtering by device_id (leftmost prefix).
+        builder.Entity<SensorReading>()
+            .HasIndex(sr => new { sr.DeviceId, sr.EdgeReadingId })
+            .IsUnique()
+            .HasDatabaseName("ix_sensor_readings_device_edge_reading");
         builder.Entity<SensorReading>().Property(sr => sr.Temperature).IsRequired();
         builder.Entity<SensorReading>().Property(sr => sr.Humidity).IsRequired();
         builder.Entity<SensorReading>().Property(sr => sr.OccupancyPresent).IsRequired();

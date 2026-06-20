@@ -35,7 +35,7 @@ public class SensorReadingRepository(AppDbContext context)
             .OrderByDescending(r => r.RecordedAt)
             .FirstOrDefaultAsync();
 
-    public async Task<bool> ExistsByEdgeReadingIdAsync(string edgeReadingId)
+    public async Task<bool> ExistsByDeviceIdAndEdgeReadingIdAsync(string deviceId, int edgeReadingId)
         => await Context.Set<SensorReading>()
-            .AnyAsync(r => r.EdgeReadingId == edgeReadingId);
+            .AnyAsync(r => r.DeviceId == deviceId && r.EdgeReadingId == edgeReadingId);
 }

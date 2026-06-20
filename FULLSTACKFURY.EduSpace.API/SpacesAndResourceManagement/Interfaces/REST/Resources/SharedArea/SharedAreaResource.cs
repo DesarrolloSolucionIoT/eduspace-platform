@@ -12,4 +12,7 @@
 /// <param name="Description">
 ///     The description of the shared area
 /// </param>
-public record SharedAreaResource(int Id, string Name, int Capacity, string Description);
+/// <param name="ZoneId">
+///     The ID of the zone to which the shared area belongs
+/// </param>
+public record SharedAreaResource(int Id, string Name, int Capacity, string Description, string? ZoneId = null);

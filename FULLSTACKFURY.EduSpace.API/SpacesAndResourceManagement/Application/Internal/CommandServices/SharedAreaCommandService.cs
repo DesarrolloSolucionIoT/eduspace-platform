@@ -44,7 +44,7 @@ public class SharedAreaCommandService(
         var sharedArea = await sharedAreaRepository.FindByIdAsync(command.Id);
         if (sharedArea is null) throw new SharedAreaNotFoundException(command.Id);
 
-        sharedArea.Update(command.Name, command.Capacity, command.Description);
+        sharedArea.Update(command.Name, command.Capacity, command.Description, command.ZoneId);
 
         sharedAreaRepository.Update(sharedArea);
         await unitOfWork.CompleteAsync();

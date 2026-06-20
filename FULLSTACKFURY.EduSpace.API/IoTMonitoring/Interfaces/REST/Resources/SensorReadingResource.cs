@@ -2,9 +2,9 @@ namespace FULLSTACKFURY.EduSpace.API.IoTMonitoring.Interfaces.REST.Resources;
 
 public record SensorReadingResource(
     int Id,
-    string EdgeReadingId,
+    int EdgeReadingId,
     string DeviceId,
-    string ZoneId,
+    string? ZoneId,
     float Temperature,
     float Humidity,
     bool OccupancyPresent,

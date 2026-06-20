@@ -14,8 +14,9 @@ public class SensorReadingCommandService(
 {
     public async Task<SensorReading?> Handle(IngestSensorReadingCommand command)
     {
-        // Deduplicate: drop readings already persisted from the same Edge reading ID.
-        if (await sensorReadingRepository.ExistsByEdgeReadingIdAsync(command.EdgeReadingId))
+        // Deduplicate: drop readings already persisted from the same (device, edge reading id).
+        if (await sensorReadingRepository.ExistsByDeviceIdAndEdgeReadingIdAsync(
+                command.DeviceId, command.EdgeReadingId))
         {
             logger.LogInformation("Duplicate edge reading {EdgeReadingId} ignored.", command.EdgeReadingId);
             return null;

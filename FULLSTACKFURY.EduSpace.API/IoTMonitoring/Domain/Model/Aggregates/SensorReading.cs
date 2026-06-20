@@ -21,9 +21,9 @@ public class SensorReading
     }
 
     public int Id { get; private set; }
-    public string EdgeReadingId { get; private set; } = string.Empty;
+    public int EdgeReadingId { get; private set; }
     public string DeviceId { get; private set; } = string.Empty;
-    public string ZoneId { get; private set; } = string.Empty;
+    public string? ZoneId { get; private set; }
     public float Temperature { get; private set; }
     public float Humidity { get; private set; }
     public bool OccupancyPresent { get; private set; }

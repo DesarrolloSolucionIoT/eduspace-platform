@@ -3,6 +3,7 @@ using System;
 using FULLSTACKFURY.EduSpace.API.Shared.Infrastructure.Persistence.EFC.Configuration;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FULLSTACKFURY.EduSpace.API.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260619224216_AddZoneIdToClassroom")]
+    partial class AddZoneIdToClassroom
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -191,8 +194,10 @@ namespace FULLSTACKFURY.EduSpace.API.Migrations
                         .HasColumnType("varchar(64)")
                         .HasColumnName("device_id");
 
-                    b.Property<int>("EdgeReadingId")
-                        .HasColumnType("int")
+                    b.Property<string>("EdgeReadingId")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)")
                         .HasColumnName("edge_reading_id");
 
                     b.Property<float>("Humidity")
@@ -216,6 +221,7 @@ namespace FULLSTACKFURY.EduSpace.API.Migrations
                         .HasColumnName("temperature");
 
                     b.Property<string>("ZoneId")
+                        .IsRequired()
                         .HasMaxLength(64)
                         .HasColumnType("varchar(64)")
                         .HasColumnName("zone_id");
@@ -223,12 +229,15 @@ namespace FULLSTACKFURY.EduSpace.API.Migrations
                     b.HasKey("Id")
                         .HasName("p_k_sensor_readings");
 
+                    b.HasIndex("DeviceId")
+                        .HasDatabaseName("i_x_sensor_readings_device_id");
+
+                    b.HasIndex("EdgeReadingId")
+                        .IsUnique()
+                        .HasDatabaseName("i_x_sensor_readings_edge_reading_id");
+
                     b.HasIndex("ZoneId")
                         .HasDatabaseName("i_x_sensor_readings_zone_id");
-
-                    b.HasIndex("DeviceId", "EdgeReadingId")
-                        .IsUnique()
-                        .HasDatabaseName("ix_sensor_readings_device_edge_reading");
 
                     b.ToTable("sensor_readings");
                 });
